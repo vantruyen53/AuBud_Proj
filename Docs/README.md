@@ -42,6 +42,7 @@
 
 ## 1.5 Cấu trúc dự án:
 **Root Path:** `d:\10.Dev\1.Projects\AuBud_App`
+```
 ├── 📁 .github
 │   └── 📁 appmod
 │       └── 📁 appcat
@@ -180,7 +181,7 @@
 │   ├── ⚙️ package.json
 │   └── ⚙️ tsconfig.json
 |
-├── 📁 Docs
+├── 📁 Docs 
 │   ├── 📝 README.md
 │   ├── 📝 abstract_interface_concrete_guide.md
 │   ├── 📄 class_diagram.puml
@@ -188,7 +189,7 @@
 │   ├── 📝 sequence_diagrams.md
 │   └── 📝 tutorial.md
 |
-└── 📁 Server
+└── 📁 Server   
     ├── 📁 src
     │   ├── 📁 config
     │   ├── 📁 data
@@ -217,7 +218,7 @@
     ├── 📄 server.ts
     └── ⚙️ tsconfig.json
 ---
-
+```
 
 **Tác giả:** Van Truyen
 **Ngày tạo:** 02/024/2026  
