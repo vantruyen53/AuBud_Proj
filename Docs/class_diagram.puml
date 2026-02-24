@@ -1,0 +1,690 @@
+@startuml PersonalBudgetApp_ClassDiagram
+
+' ============================================
+' INTERFACES
+' ============================================
+
+interface IAuthenticatable {
+    +authenticate(credential: String): boolean
+    +logout(): void
+    +isAuthenticated(): boolean
+}
+
+interface INotifiable {
+    +sendNotification(notification: Notification): void
+    +getNotifications(): List<Notification>
+    +markAsRead(notificationId: int): void
+}
+
+interface IReportable {
+    +generateReport(dateRange: DateRange): Report
+    +generateChart(type: ChartType, dateRange: DateRange): Chart
+}
+
+interface IExportable {
+    +exportToExcel(): byte[]
+    +exportToPDF(): byte[]
+}
+
+interface IMonitorable {
+    +checkThreshold(): boolean
+    +triggerAlert(): void
+    +getStatus(): MonitorStatus
+}
+
+interface IRepository<T> {
+    +findById(id: int): T
+    +findAll(): List<T>
+    +save(entity: T): T
+    +delete(id: int): void
+    +update(entity: T): T
+}
+
+interface IReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+interface IExportStrategy {
+    +export(data: Object): byte[]
+}
+
+interface IObserver {
+    +update(event: Event): void
+}
+
+' ============================================
+' DOMAIN MODELS - CORE ENTITIES
+' ============================================
+
+class User {
+    -id: int
+    -email: String
+    -phone: String
+    -userName: String
+    -createdAt: DateTime
+    
+    +getId(): int
+    +getEmailOrPhone(): String
+    +validate(): boolean
+    +getRole():String
+    +getName():String
+    +updateProfile(data: Object): void
+}
+
+class Account {
+    -id: int
+    -email: String
+    -phone: String
+    -password: String
+    -createdAt: DateTime
+    -role: String
+    -userId: int
+    -status: String
+    -accessedToday: boolean
+    -lastLogin: DateTime
+    -verified: boolean
+    
+    +authenticate(credential: String): boolean
+    +logout(): void
+    +isAuthenticated(): boolean
+    +changePassword(newPassword: String): void
+    +verifyAccount(): void
+}
+
+abstract class AbstractWallet {
+    #id: int
+    #name: String
+    #balance: double
+    #createdAt: DateTime
+    #status: String
+    
+    +{abstract} deposit(amount: double): void
+    +{abstract} withdraw(amount: double): void
+    +{abstract} getBalance(): double
+    +validateAmount(amount: double): boolean
+    #updateBalance(amount: double): void
+}
+
+class PersonalWallet {
+    -userId: int
+    
+    +deposit(amount: double): void
+    +withdraw(amount: double): void
+    +getBalance(): double
+    +transfer(toWallet: AbstractWallet, amount: double): void
+}
+
+class GroupFund {
+    -groupId: int
+    -createdBy: int
+    
+    +deposit(amount: double): void
+    +withdraw(amount: double): void
+    +getBalance(): double
+    +checkPermission(userId: int): boolean
+}
+
+abstract class AbstractTransaction {
+    #id: int
+    #amount: double
+    #type: String
+    #createdAt: DateTime
+    #note: String
+    
+    +{abstract} execute(): boolean
+    +{abstract} validate(): boolean
+    +calculateBalance(): double
+    +addNote(note: String): void
+}
+
+class PersonalTransaction {
+    -userId: int
+    -walletId: int
+    -categoryDetailId: int
+    -budgetId: int
+    -transactionTime: Time
+    -lastInput: DateTime
+    -status: String
+    
+    +execute(): boolean
+    +validate(): boolean
+    +linkToBudget(budgetId: int): void
+}
+
+class GroupTransaction {
+    -userId: int
+    -groupFundId: int
+    -categoryDetailId: int
+    -groupId: int
+    
+    +execute(): boolean
+    +validate(): boolean
+    +notifyGroupMembers(): void
+}
+
+class Category {
+    -id: int
+    -name: String
+    -type: String
+    -userId: int
+    -usageCount: int
+    -lastUsedAt: DateTime
+    
+    +incrementUsage(): void
+    +updateLastUsed(): void
+    +getDetails(): List<CategoryDetail>
+}
+
+class CategoryDetail {
+    -id: int
+    -name: String
+    -userCount: int
+    -categoryId: int
+    
+    +incrementUserCount(): void
+    +getCategoryInfo(): Category
+}
+
+class Budget {
+    -id: int
+    -userId: int
+    -categoryId: int
+    -balance: double
+    -remaining: double
+    -yearMonth: Date
+    -status: String
+    -lastAccess: DateTime
+    
+    +checkThreshold(): boolean
+    +triggerAlert(): void
+    +getStatus(): MonitorStatus
+    +updateRemaining(amount: double): void
+}
+
+class LoanDebt {
+    -id: int
+    -userId: int
+    -amount: double
+    -type: String
+    -toOther: String
+    -createdAt: DateTime
+    -remaining: double
+    -note: String
+    
+    +makePayment(amount: double): void
+    +calculateRemaining(): double
+    +getPaymentHistory(): List<Payment>
+}
+
+class SavingsBook {
+    -id: int
+    -userId: int
+    -balance: double
+    -name: String
+    -createdAt: DateTime
+    -lastAccess: DateTime
+    
+    +addSavings(amount: double): void
+    +withdrawSavings(amount: double): void
+    +getHistory(): List<SavingsHistory>
+}
+
+class SavingsHistory {
+    -id: int
+    -userId: int
+    -walletId: int
+    -amount: double
+    -createdAt: Date
+    -note: String
+    -type: String
+    -savingsBookId: int
+    
+    +getDetails(): Object
+}
+
+class Group {
+    -id: int
+    -name: String
+    -createdAt: DateTime
+    -status: String
+    
+    +addMember(userId: int, role: String): void
+    +removeMember(userId: int): void
+    +checkPermission(userId: int, action: String): boolean
+    +getMembers(): List<MemberGroup>
+}
+
+class MemberGroup {
+    -id: int
+    -userId: int
+    -groupId: int
+    -role: String
+    -joinedAt: DateTime
+    
+    +updateRole(newRole: String): void
+}
+
+class Notification {
+    -id: int
+    -forUserId: int
+    -contents: String
+    -createdAt: DateTime
+    -isRead: boolean
+    
+    +markAsRead(): void
+    +getContent(): String
+}
+
+class Log {
+    -id: int
+    -contents: String
+    -byUserId: int
+    -createdAt: DateTime
+    -action: String
+    -ipAddress: String
+    
+    +getLogInfo(): Object
+}
+
+class Traffic {
+    -id: int
+    -trafficCount: int
+    -date: Date
+    
+    +incrementCount(): void
+    +getCount(): int
+}
+
+class GoalPrice {
+    -id: int
+    -type: String
+    -buyPrice: double
+    -sellPrice: double
+    -datetime: DateTime
+    
+    +update(buyPrice: double, sellPrice: double): void
+}
+
+class ForeignCurrency {
+    -id: int
+    -country: String
+    -foreignCurrency: String
+    -vnd: double
+    -dateTime: DateTime
+    
+    +getExchangeRate(): double
+    +update(rate: double): void
+}
+
+' ============================================
+' REPOSITORY INTERFACES
+' ============================================
+
+interface IUserRepository {
+    +findByEmail(email: String): User
+    +findByPhone(phone: String): User
+}
+
+interface IAccountRepository {
+    +findByEmail(email: String): Account
+    +updateLastLogin(accountId: int): void
+}
+
+interface ITransactionRepository {
+    +findByUserId(userId: int): List<AbstractTransaction>
+    +findByDateRange(range: DateRange): List<AbstractTransaction>
+    +findByWalletId(walletId: int): List<AbstractTransaction>
+}
+
+interface IWalletRepository {
+    +findByUserId(userId: int): List<AbstractWallet>
+    +findByUserIdAndName(userId: int, name: String): AbstractWallet
+}
+
+interface IBudgetRepository {
+    +findByUserId(userId: int): List<Budget>
+    +findByMonth(userId: int, month: Date): List<Budget>
+}
+
+interface IGroupRepository {
+    +findByUserId(userId: int): List<Group>
+}
+
+interface INotificationRepository {
+    +findByUserId(userId: int): List<Notification>
+    +findUnread(userId: int): List<Notification>
+}
+
+' ============================================
+' SERVICE LAYER
+' ============================================
+
+class AuthenticationService {
+    -userRepository: IUserRepository
+    -accountRepository: IAccountRepository
+    -tokenService: TokenService
+    
+    +login(email: String, password: String): AuthResult
+    +register(userInfo: Object): User
+    +forgotPassword(email: String): void
+    +resetPassword(token: String, newPassword: String): void
+    +logout(token: String): void
+    +verifyToken(token: String): boolean
+}
+
+class TransactionService {
+    -transactionRepository: ITransactionRepository
+    -walletRepository: IWalletRepository
+    -budgetService: BudgetService
+    -notificationService: NotificationService
+    
+    +createTransaction(data: Object): AbstractTransaction
+    +updateTransaction(id: int, data: Object): AbstractTransaction
+    +deleteTransaction(id: int): void
+    +getTransactionHistory(userId: int, filters: Object): List<AbstractTransaction>
+    +syncBankTransaction(bankData: Object): void
+}
+
+class WalletService {
+    -walletRepository: IWalletRepository
+    -notificationService: NotificationService
+    
+    +createWallet(data: Object): AbstractWallet
+    +updateWallet(id: int, data: Object): AbstractWallet
+    +deleteWallet(id: int): void
+    +getWalletsByUser(userId: int): List<AbstractWallet>
+    +transferBetweenWallets(fromId: int, toId: int, amount: double): void
+    +requestBalanceUpdate(userId: int): void
+}
+
+class BudgetService {
+    -budgetRepository: IBudgetRepository
+    -transactionRepository: ITransactionRepository
+    -notificationService: NotificationService
+    
+    +createBudget(data: Object): Budget
+    +updateBudget(id: int, data: Object): Budget
+    +checkBudgetStatus(budgetId: int): BudgetStatus
+    +monitorBudgets(): void
+    +getBudgetReport(userId: int, month: Date): Report
+}
+
+class ReportService {
+    -transactionRepository: ITransactionRepository
+    -walletRepository: IWalletRepository
+    -budgetRepository: IBudgetRepository
+    -reportStrategy: IReportStrategy
+    
+    +generateReport(type: String, filters: Object): Report
+    +generateChart(chartType: String, filters: Object): Chart
+    +setReportStrategy(strategy: IReportStrategy): void
+}
+
+class NotificationService {
+    -notificationRepository: INotificationRepository
+    -notificationFactory: NotificationFactory
+    -subscribers: List<INotifiable>
+    
+    +sendNotification(userId: int, content: String): void
+    +sendBulkNotification(userIds: List<int>, content: String): void
+    +scheduleNotification(userId: int, content: String, time: DateTime): void
+    +update(event: Event): void
+}
+
+class GroupService {
+    -groupRepository: IGroupRepository
+    -memberRepository: IMemberGroupRepository
+    -fundRepository: IGroupFundRepository
+    
+    +createGroup(data: Object): Group
+    +addMember(groupId: int, userId: int, role: String): void
+    +removeMember(groupId: int, userId: int): void
+    +createGroupFund(data: Object): GroupFund
+    +checkPermission(groupId: int, userId: int, action: String): boolean
+}
+
+class AIAssistantService {
+    -transactionRepository: ITransactionRepository
+    -walletRepository: IWalletRepository
+    -budgetRepository: IBudgetRepository
+    -aiClient: AIClient
+    
+    +queryFinancialData(userId: int, query: String): String
+    +getSuggestions(userId: int): List<Suggestion>
+    +analyzeBehavior(userId: int): AnalysisResult
+}
+
+class ExportService {
+    -exportStrategy: IExportStrategy
+    
+    +exportToExcel(data: Object): byte[]
+    +exportToPDF(data: Object): byte[]
+    +setExportStrategy(strategy: IExportStrategy): void
+}
+
+class MarketDataService {
+    -goalPriceRepository: IGoalPriceRepository
+    -currencyRepository: IForeignCurrencyRepository
+    -apiClient: ExternalAPIClient
+    
+    +getRealEstatePrice(): List<GoalPrice>
+    +getCryptoPrice(): List<GoalPrice>
+    +getExchangeRate(currency: String): ForeignCurrency
+    +updateMarketData(): void
+}
+
+class AdminService {
+    -userRepository: IUserRepository
+    -logRepository: ILogRepository
+    -trafficRepository: ITrafficRepository
+    
+    +getUserList(filters: Object): List<User>
+    +getUserDetail(userId: int): UserDetail
+    +manageUser(userId: int, action: String): void
+    +getTrafficStatistics(dateRange: DateRange): TrafficStats
+    +getLogs(filters: Object): List<Log>
+}
+
+' ============================================
+' FACTORIES
+' ============================================
+
+class TransactionFactory {
+    +{static} createTransaction(type: String): AbstractTransaction
+    +{static} createPersonalTransaction(data: Object): PersonalTransaction
+    +{static} createGroupTransaction(data: Object): GroupTransaction
+}
+
+class NotificationFactory {
+    +{static} createNotification(type: String, data: Object): Notification
+    +{static} createLoginAlert(userId: int): Notification
+    +{static} createBudgetAlert(userId: int, budgetId: int): Notification
+    +{static} createReminderNotification(userId: int): Notification
+}
+
+' ============================================
+' STRATEGIES
+' ============================================
+
+class DailyReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+class WeeklyReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+class MonthlyReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+class YearlyReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+class CategoryReportStrategy {
+    +generate(data: Object, filters: Object): Report
+}
+
+class ExcelExportStrategy {
+    +export(data: Object): byte[]
+}
+
+class PDFExportStrategy {
+    +export(data: Object): byte[]
+}
+
+' ============================================
+' HELPERS
+' ============================================
+
+class ValidationHelper {
+    +{static} validateEmail(email: String): boolean
+    +{static} validatePhone(phone: String): boolean
+    +{static} validateAmount(amount: double): boolean
+    +{static} validateDate(date: Date): boolean
+}
+
+class EncryptionHelper {
+    +{static} hashPassword(password: String): String
+    +{static} verifyPassword(password: String, hash: String): boolean
+    +{static} generateToken(): String
+}
+
+class DateTimeHelper {
+    +{static} getCurrentDateTime(): DateTime
+    +{static} formatDate(date: Date, format: String): String
+    +{static} calculateDateRange(type: String): DateRange
+}
+
+' ============================================
+' SCHEDULERS
+' ============================================
+
+class NotificationScheduler {
+    -notificationService: NotificationService
+    -userRepository: IUserRepository
+    
+    +checkInactiveUsers(): void
+    +checkBudgetThresholds(): void
+    +sendDailyReminders(): void
+    +sendMonthlyPlanningReminder(): void
+}
+
+class DataSyncScheduler {
+    -transactionService: TransactionService
+    -marketDataService: MarketDataService
+    
+    +syncBankTransactions(): void
+    +updateMarketData(): void
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Interface Implementation
+Account ..|> IAuthenticatable
+User ..|> INotifiable
+Budget ..|> IMonitorable
+NotificationService ..|> IObserver
+
+IUserRepository --|> IRepository
+IAccountRepository --|> IRepository
+ITransactionRepository --|> IRepository
+IWalletRepository --|> IRepository
+IBudgetRepository --|> IRepository
+IGroupRepository --|> IRepository
+INotificationRepository --|> IRepository
+
+DailyReportStrategy ..|> IReportStrategy
+WeeklyReportStrategy ..|> IReportStrategy
+MonthlyReportStrategy ..|> IReportStrategy
+YearlyReportStrategy ..|> IReportStrategy
+CategoryReportStrategy ..|> IReportStrategy
+
+ExcelExportStrategy ..|> IExportStrategy
+PDFExportStrategy ..|> IExportStrategy
+
+' Inheritance
+PersonalWallet --|> AbstractWallet
+GroupFund --|> AbstractWallet
+PersonalTransaction --|> AbstractTransaction
+GroupTransaction --|> AbstractTransaction
+
+' Composition - User relationships
+User "1" *-- "0..*" PersonalWallet : owns
+User "1" *-- "0..*" PersonalTransaction : creates
+User "1" *-- "0..*" Budget : manages
+User "1" *-- "0..*" LoanDebt : has
+User "1" *-- "0..*" SavingsBook : owns
+User "1" -- "1" Account : has
+
+' Composition - Transaction relationships
+PersonalTransaction "0..*" -- "1" PersonalWallet : affects
+PersonalTransaction "0..*" -- "1" CategoryDetail : categorized_by
+PersonalTransaction "0..*" -- "0..1" Budget : linked_to
+
+GroupTransaction "0..*" -- "1" GroupFund : affects
+GroupTransaction "0..*" -- "1" CategoryDetail : categorized_by
+GroupTransaction "0..*" -- "1" Group : belongs_to
+
+' Category relationships
+Category "1" *-- "0..*" CategoryDetail : contains
+Budget "0..*" -- "1" Category : monitors
+
+' Group relationships
+Group "1" *-- "0..*" MemberGroup : has
+Group "1" *-- "0..*" GroupFund : manages
+MemberGroup "0..*" -- "1" User : represents
+
+' Savings relationships
+SavingsBook "1" *-- "0..*" SavingsHistory : tracks
+SavingsHistory "0..*" -- "1" PersonalWallet : source
+
+' Notification relationships
+User "1" -- "0..*" Notification : receives
+
+' Service Dependencies
+AuthenticationService ..> IUserRepository : uses
+AuthenticationService ..> IAccountRepository : uses
+
+TransactionService ..> ITransactionRepository : uses
+TransactionService ..> IWalletRepository : uses
+TransactionService ..> BudgetService : uses
+TransactionService ..> NotificationService : uses
+
+WalletService ..> IWalletRepository : uses
+WalletService ..> NotificationService : uses
+
+BudgetService ..> IBudgetRepository : uses
+BudgetService ..> ITransactionRepository : uses
+BudgetService ..> NotificationService : uses
+
+ReportService ..> ITransactionRepository : uses
+ReportService ..> IWalletRepository : uses
+ReportService ..> IBudgetRepository : uses
+ReportService ..> IReportStrategy : uses
+
+ExportService ..> IExportStrategy : uses
+
+GroupService ..> IGroupRepository : uses
+
+AIAssistantService ..> ITransactionRepository : uses
+AIAssistantService ..> IWalletRepository : uses
+AIAssistantService ..> IBudgetRepository : uses
+
+AdminService ..> IUserRepository : uses
+
+' Factory relationships
+TransactionFactory ..> AbstractTransaction : creates
+NotificationFactory ..> Notification : creates
+
+' Scheduler relationships
+NotificationScheduler ..> NotificationService : uses
+NotificationScheduler ..> IUserRepository : uses
+
+DataSyncScheduler ..> TransactionService : uses
+DataSyncScheduler ..> MarketDataService : uses
+
+@enduml
