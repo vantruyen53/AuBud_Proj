@@ -1,327 +1,224 @@
-# ĐỒ ÁN TỐT NGHIỆP - ỨNG DỤNG QUẢN LÝ NGÂN SÁCH CÁ NHÂN
-## Tài liệu thiết kế Class Diagram & Implementation Guide
+  # ĐỒ ÁN TỐT NGHIỆP - ỨNG DỤNG QUẢN LÝ NGÂN SÁCH CÁ NHÂN
 
 ---
 
 ## 📚 DANH SÁCH TÀI LIỆU
 
-### 1. **class_diagram_design.md** 
-📖 Tài liệu thiết kế Class Diagram chi tiết
+### 1. **OVerview** 
 
-**Nội dung:**
-- Giải thích nguyên tắc SOLID đã áp dụng
-- Kiến trúc tổng quan (Layered Architecture)
-- Chi tiết từng layer:
-  - Domain Models (Entities)
-  - Interfaces
-  - Repository Layer
-  - Service Layer
-  - Utility Classes
-  - Background Jobs
-- Quan hệ giữa các class
-- Lưu ý khi implement
+## 1.1 Chủ đề:
+  -  Ứng dụng quản lí ngân sách cá nhân có tích hợp chat box AI để thực hiện 1 số các tác vụ cơ bản. 
 
-**Khi nào đọc:** ĐỌC ĐẦU TIÊN để hiểu tổng quan thiết kế
+## 1.2 Công nghệ: 
+  - FE: react native
+  - BE: Nodejs
+  - Language: typescrip
+  - SQL: Mysql
 
+## 1.3 Cấu trúc dự án chia làm 4 phần chính:
+  - Docs/ -> Chứa các tài liệu hướng dẫn và giới thiệu về dự án
+  - Client/ -> Cấu trúc code giao diện ứng dụng người dùng
+  - Server/ -> Logic backend sử lý yêu cầu người dùng và kết nối db
+  - Admin/ -> Cấu trúc cdoe giao diện admin dashboard của người quản lí hệ thống thống
+
+## 1.4 Các chức năng của ứng dụng:
+  ### Client:
+  - Ứng dụng quản lý tài chính cá nhân cho phép người dùng đăng ký, đăng nhập tài khoản bằng email và mật khẩu, đồng thời hỗ trợ chức năng quên mật khẩu để người dùng khôi phục tài khoản khi cần thiết. Hệ thống áp dụng cơ chế xác thực và phân quyền người dùng, đảm bảo mỗi người chỉ có thể truy cập vào dữ liệu cá nhân hoặc dữ liệu nhóm được cấp quyền.
+  - Người dùng có thể tạo và quản lý nhiều ví tài chính khác nhau như tiền mặt, tài khoản ngân hàng hoặc ví điện tử. Mỗi ví có số dư và lịch sử giao dịch riêng, giúp người dùng theo dõi tài chính một cách rõ ràng.
+  - Ứng dụng cho phép người dùng nhập và theo dõi các khoản thu nhập và chi tiêu theo từng danh mục. Người dùng có thể xem lịch sử giao dịch, lọc theo thời gian và nhận cảnh báo khi số dư gần chạm hoặc vượt hạn mức đã thiết lập.
+  - Hệ thống cung cấp biểu đồ và báo cáo thống kê chi tiêu theo các mốc thời gian như ngày, tuần, tháng và năm, thống kêu theo category, thống kê chi tiêu của từng vi
+  - Ngoài ra, ứng dụng hỗ trợ quản lý các khoản nợ, vay và mục tiêu tiết kiệm theo tháng. Người dùng có thể thiết lập kế hoạch chi tiêu, bao gồm mức chi-thu dự kiến và số tiền cần tiết kiệm mỗi tháng, và theo dõi tiến độ thực hiện theo thời gian.
+  - Ứng dụng tích hợp chatbox AI hỗ trợ tài chính, cho phép người dùng truy vấn thông tin chi tiêu và nhận gợi ý kế hoạch tài chính dựa trên số dư và lịch sử giao dịch. 
+  - Hệ thống có tính năng tạo nhóm tài chính cho gia đình hoặc bạn bè. Người dùng có thể tạo quỹ chung, lập kế hoạch và chi tiêu chung trong nhóm. Hệ thống phân quyền rõ ràng giữa chủ nhóm và thành viên để đảm bảo minh bạch và an toàn dữ liệu.
+  - xuất Dữ liệu thành file excel
+  -cung cấp tóm tắt các xu hướng đầu tư theo thời gian thực, như giá nhà đất, tiền điện tử, trao đổi ngoại tệ
+  - liên kết với các ngân hàng để tự động nhập các giao dịch vào app khi giao dịch trên ngân hàng
+  - tự động gởi thông báo cho người dùng nếu người dùng đăng nhập trên thiết bị khác, hôm nay chưa nhập giao dịch nào, nhắc nhở người dùng chi tiêu vượt quá ngân sách, đã nhiều ngày chưa truy cập vào app để nhập, lập ngân sách cho tháng mới, lên kế hoạch chi tiêu. 
+  - nếu người dùng không đăng nhập trong vòng hơn 1 ngày, app sẽ yêu cầu người dùng nhập lại số dư mới để đảm bảo số dư trong app luôn bằng với số dư thực tế (vì người dùng có thể đã thu-chi mà không nhập vào app)
+  ### Admin:
+  - Hệ thống được tích hợp cơ chế ghi log  để theo dõi và lưu lại các hoạt động quan trọng của người dùng như đăng nhập, đăng nhập thất bại, khôi phục mật khẩu .
+  - Hiển thị lưu lượng truy cập trong ngày, những ngày trong tháng, hàng tháng, 
+  - Quản lí tài khoản người dùng.
+
+## 1.5 Cấu trúc dự án:
+**Root Path:** `d:\10.Dev\1.Projects\AuBud_App`
+├── 📁 .github
+│   └── 📁 appmod
+│       └── 📁 appcat
+├── 📁 Admin
+│   ├── 📁 public
+│   │   └── 🖼️ vite.svg
+│   ├── 📁 src
+│   │   ├── 📁 Context
+│   │   ├── 📁 assets
+│   │   │   └── 🖼️ react.svg
+│   │   ├── 📁 components
+│   │   │   ├── 📁 common
+│   │   │   └── 📁 transaction
+│   │   ├── 📁 constants
+│   │   ├── 📁 hooks
+│   │   ├── 📁 model
+│   │   ├── 📁 pages
+│   │   │   ├── 📁 auth
+│   │   │   ├── 📁 budget
+│   │   │   ├── 📁 dashboard
+│   │   │   ├── 📁 group
+│   │   │   ├── 📁 transaction
+│   │   │   └── 📁 wallet
+│   │   ├── 📁 router
+│   │   ├── 📁 services
+│   │   │   ├── 📁 api
+│   │   │   └── 📁 store
+│   │   ├── 📁 styles
+│   │   │   ├── 🎨 App.css
+│   │   │   └── 🎨 index.css
+│   │   ├── 📄 App.tsx
+│   │   └── 📄 main.tsx
+│   ├── ⚙️ .gitignore
+│   ├── 📝 README.md
+│   ├── 📄 eslint.config.js
+│   ├── 🌐 index.html
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   ├── ⚙️ tsconfig.app.json
+│   ├── ⚙️ tsconfig.json
+│   ├── ⚙️ tsconfig.node.json
+│   └── 📄 vite.config.ts
+|  
+├── 📁 Client
+│   ├── 📁 .expo
+│   │   ├── 📝 README.md
+│   │   └── ⚙️ devices.json
+│   ├── 📁 src
+│   │   ├── 📁 app
+│   │   │   ├── 📁 auth
+│   │   │   │   ├── 📄 forgotPassworsScreen.tsx
+│   │   │   │   ├── 📄 login.tsx
+│   │   │   │   ├── 📄 resetPasswordScreen.tsx
+│   │   │   │   ├── 📄 signUpPage.tsx
+│   │   │   │   └── 📄 verifyOTPScreen.tsx
+│   │   │   ├── 📁 tabs
+│   │   │   │   ├── 📁 detailStack
+│   │   │   │   │   ├── 📄 HistoryScreen.tsx
+│   │   │   │   │   ├── 📄 addTransaction.tsx
+│   │   │   │   │   ├── 📄 allCategory.tsx
+│   │   │   │   │   └── 📄 groupScreen.tsx
+│   │   │   │   ├── 📄 AnalysisScreen.tsx
+│   │   │   │   ├── 📄 BudgetScreen.tsx
+│   │   │   │   ├── 📄 HomeScreen.tsx
+│   │   │   │   ├── 📄 MoreScreen.tsx
+│   │   │   │   ├── 📄 WalletScreen.tsx
+│   │   │   │   └── 📄 chatAI.tsx
+│   │   │   └── 📄 CustomSplashScreen.tsx
+│   │   ├── 📁 assets
+│   │   │   ├── 📁 images
+│   │   │   │   ├── 🖼️ _ seriousLogo.png
+│   │   │   │   ├── 🖼️ _happyLogo.png
+│   │   │   │   ├── 🖼️ _logo.png
+│   │   │   │   ├── 🖼️ _sabLogo.png
+│   │   │   │   └── 🖼️ welcome.png
+│   │   │   └── 📁 styles
+│   │   │       ├── 📄 addTransactionStyle.ts
+│   │   │       ├── 📄 analysisStyle.ts
+│   │   │       ├── 📄 authStyle.tsx
+│   │   │       ├── 📄 calenderStyle.ts
+│   │   │       ├── 📄 historyStyle.ts
+│   │   │       ├── 📄 homeStyle.tsx
+│   │   │       ├── 📄 modalStyle.tsx
+│   │   │       ├── 📄 monthGridStyle.ts
+│   │   │       ├── 📄 splashStyle.tsx
+│   │   │       ├── 📄 typeDebts.ts
+│   │   │       ├── 📄 walletStyle.ts
+│   │   │       └── 📄 yearListStyle.ts
+│   │   ├── 📁 components
+│   │   │   ├── 📄 barChartTransaction.tsx
+│   │   │   ├── 📄 calendar.tsx
+│   │   │   ├── 📄 customModal.tsx
+│   │   │   ├── 📄 floatAddBtn.tsx
+│   │   │   ├── 📄 horizontalBarChart.tsx
+│   │   │   ├── 📄 monthGrid.tsx
+│   │   │   ├── 📄 pieChart.tsx
+│   │   │   ├── 📄 transaction.tsx
+│   │   │   ├── 📄 typeDebts.tsx
+│   │   │   └── 📄 yearList.tsx
+│   │   ├── 📁 constants
+│   │   │   └── 📄 theme.ts
+│   │   ├── 📁 hooks
+│   │   │   └── 📄 useProvider.tsx
+│   │   ├── 📁 models
+│   │   │   ├── 📁 types
+│   │   │   │   ├── 📄 RootStackParamList.ts
+│   │   │   │   └── 📄 appContext.ts
+│   │   │   └── 📄 IApp.ts
+│   │   ├── 📁 navigation
+│   │   │   ├── 📄 _layout.tsx
+│   │   │   ├── 📄 _layoutAuth.tsx
+│   │   │   ├── 📄 _layoutDetailStack.tsx
+│   │   │   └── 📄 _layoutTabs.tsx
+│   │   ├── 📁 services
+│   │   ├── 📁 store
+│   │   │   ├── 📁 context
+│   │   │   ├── 📁 local
+│   │   │   └── 📁 seed
+│   │   │       ├── 📄 budget.ts
+│   │   │       ├── 📄 category.ts
+│   │   │       ├── 📄 debt.ts
+│   │   │       ├── 📄 groupFunds.ts
+│   │   │       ├── 📄 saving.ts
+│   │   │       ├── 📄 statistics.ts
+│   │   │       ├── 📄 transaction.ts
+│   │   │       └── 📄 wallets.ts
+│   │   └── 📁 utils
+│   │       ├── 📄 format.ts
+│   │       ├── 📄 generateSectionList .ts
+│   │       └── 📄 helper.ts
+│   ├── ⚙️ .gitignore
+│   ├── 📄 App.tsx
+│   ├── ⚙️ app.json
+│   ├── 📄 index.ts
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   └── ⚙️ tsconfig.json
+|
+├── 📁 Docs
+│   ├── 📝 README.md
+│   ├── 📝 abstract_interface_concrete_guide.md
+│   ├── 📄 class_diagram.puml
+│   ├── 📝 class_diagram_design.md
+│   ├── 📝 sequence_diagrams.md
+│   └── 📝 tutorial.md
+|
+└── 📁 Server
+    ├── 📁 src
+    │   ├── 📁 config
+    │   ├── 📁 data
+    │   │   ├── 📁 datasources
+    │   │   │   ├── 📁 local
+    │   │   │   └── 📁 remote
+    │   │   ├── 📁 models
+    │   │   └── 📁 repositories
+    │   ├── 📁 domain
+    │   │   ├── 📁 abstracts
+    │   │   ├── 📁 entities
+    │   │   ├── 📁 enums
+    │   │   └── 📁 interfaces
+    │   ├── 📁 middlewares
+    │   ├── 📁 routes
+    │   ├── 📁 services
+    │   └── 📁 utils
+    │       ├── 📁 factories
+    │       ├── 📁 helpers
+    │       └── 📁 strategies
+    │           ├── 📁 export
+    │           └── 📁 report
+    ├── ⚙️ .gitignore
+    ├── ⚙️ package-lock.json
+    ├── ⚙️ package.json
+    ├── 📄 server.ts
+    └── ⚙️ tsconfig.json
 ---
 
-### 2. **class_diagram.puml**
-🎨 File PlantUML để render Class Diagram
 
-**Cách sử dụng:**
-1. Copy nội dung file
-2. Paste vào http://www.plantuml.com/plantuml/uml
-3. Hoặc dùng PlantUML plugin trong IDE (VS Code, IntelliJ)
-4. Export ra PNG/SVG để đưa vào báo cáo
-
-**Chứa:**
-- Tất cả classes, interfaces, abstract classes
-- Relationships (inheritance, composition, dependency)
-- Có thể chia nhỏ thành nhiều diagrams nếu quá lớn
-
----
-
-### 3. **abstract_interface_concrete_guide.md**
-🎓 Hướng dẫn chi tiết: Khi nào dùng Abstract Class, Interface, Concrete Class
-
-**Nội dung:**
-- So sánh 3 loại class
-- Quy tắc vàng khi chọn
-- Case studies từ dự án của bạn
-- Decision tree để ra quyết định
-- Anti-patterns cần tránh
-- Checklist khi thiết kế
-
-**Khi nào đọc:** Khi bạn vẫn chưa rõ khi nào dùng loại class nào
-
----
-
-### 4. **sequence_diagrams.md**
-⏱️ Sequence Diagrams cho các use case quan trọng
-
-**Nội dung:**
-- User Authentication (Đăng nhập)
-- Create Transaction (Tạo giao dịch)
-- Generate Report (Tạo báo cáo)
-- Budget Monitoring (Background job)
-- AI Chatbot Query
-- Group Transaction
-- Bank Sync (Background job)
-
-**Cách sử dụng:**
-- Copy code PlantUML vào http://www.plantuml.com/plantuml/uml
-- Render thành hình ảnh
-- Đưa vào phần sequence diagram trong báo cáo
-
----
-
-### 5. **implementation_guide.md**
-💻 Hướng dẫn implementation chi tiết
-
-**Nội dung:**
-- Tech stack gợi ý cho từng layer
-- Database design improvements
-- Code examples cho từng layer:
-  - Domain Models (Entity với JPA annotations)
-  - Abstract Class implementation
-  - Concrete Class implementation
-  - Repository với Spring Data JPA
-  - Service Layer với business logic
-- Security implementation (Password encryption, JWT)
-- Error handling (Global Exception Handler)
-- Testing (Unit test examples)
-- Configuration files
-- Deployment checklist
-
-**Khi nào đọc:** Khi bắt đầu coding
-
----
-
-## 🚀 LỘ TRÌNH SỬ DỤNG TÀI LIỆU
-
-### Giai đoạn 1: HIỂU THIẾT KẾ (1-2 ngày)
-1. Đọc **class_diagram_design.md** để hiểu tổng quan
-2. Đọc **abstract_interface_concrete_guide.md** để hiểu sâu về OOP
-3. Render **class_diagram.puml** để visualize
-4. Đọc **sequence_diagrams.md** để hiểu flow
-
-### Giai đoạn 2: CHUẨN BỊ IMPLEMENTATION (1 ngày)
-1. Đọc **implementation_guide.md** phần Tech Stack
-2. Quyết định công nghệ sử dụng (Java/C#/Node.js)
-3. Đọc phần Database Design Improvements
-4. Setup project structure
-
-### Giai đoạn 3: CODING (2-4 tuần)
-1. Implement Domain Models (theo example trong implementation_guide.md)
-2. Implement Repositories
-3. Implement Services
-4. Implement Controllers/API
-5. Implement Security
-6. Implement Background Jobs
-7. Testing
-
-### Giai đoạn 4: HOÀN THIỆN BÁO CÁO
-1. Export class diagram từ PlantUML
-2. Export sequence diagrams
-3. Tham khảo giải thích trong các file .md
-4. Viết phần mô tả thiết kế
-
----
-
-## 📐 CẤU TRÚC DỰ ÁN GỢI Ý
-
-```
-personal-budget-app/
-│
-├── docs/                           # Documentation
-│   ├── class_diagram.png
-│   ├── sequence_diagrams/
-│   └── api_documentation.md
-│
-├── src/
-│   ├── main/
-│   │   ├── java/com/yourname/budgetapp/
-│   │   │   │
-│   │   │   ├── domain/            # Domain Models (Entities)
-│   │   │   │   ├── User.java
-│   │   │   │   ├── Account.java
-│   │   │   │   ├── AbstractWallet.java
-│   │   │   │   ├── PersonalWallet.java
-│   │   │   │   ├── AbstractTransaction.java
-│   │   │   │   ├── PersonalTransaction.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── repository/        # Data Access Layer
-│   │   │   │   ├── IUserRepository.java
-│   │   │   │   ├── ITransactionRepository.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── service/           # Business Logic Layer
-│   │   │   │   ├── AuthenticationService.java
-│   │   │   │   ├── TransactionService.java
-│   │   │   │   ├── WalletService.java
-│   │   │   │   ├── BudgetService.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── controller/        # API Controllers
-│   │   │   │   ├── AuthController.java
-│   │   │   │   ├── TransactionController.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── dto/               # Data Transfer Objects
-│   │   │   │   ├── TransactionDTO.java
-│   │   │   │   ├── UserDTO.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── security/          # Security Config
-│   │   │   │   ├── JwtTokenProvider.java
-│   │   │   │   ├── SecurityConfig.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── scheduler/         # Background Jobs
-│   │   │   │   ├── NotificationScheduler.java
-│   │   │   │   ├── DataSyncScheduler.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── util/              # Utilities
-│   │   │   │   ├── ValidationHelper.java
-│   │   │   │   ├── EncryptionHelper.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   ├── factory/           # Factory Classes
-│   │   │   │   ├── TransactionFactory.java
-│   │   │   │   └── NotificationFactory.java
-│   │   │   │
-│   │   │   ├── strategy/          # Strategy Pattern
-│   │   │   │   ├── IReportStrategy.java
-│   │   │   │   ├── MonthlyReportStrategy.java
-│   │   │   │   └── ...
-│   │   │   │
-│   │   │   └── exception/         # Custom Exceptions
-│   │   │       ├── ResourceNotFoundException.java
-│   │   │       ├── InsufficientBalanceException.java
-│   │   │       └── ...
-│   │   │
-│   │   └── resources/
-│   │       ├── application.yml
-│   │       └── db/migration/      # Database scripts
-│   │
-│   └── test/                      # Unit & Integration Tests
-│       └── java/com/yourname/budgetapp/
-│           ├── service/
-│           ├── repository/
-│           └── ...
-│
-├── pom.xml / build.gradle         # Dependencies
-└── README.md
-```
-
----
-
-## 🛠️ CÔNG NGHỆ GỢI Ý
-
-### Backend:
-- **Java Spring Boot** (Recommended)
-  - Spring Data JPA
-  - Spring Security
-  - Spring Scheduler
-  
-- Hoặc **.NET Core**
-  - Entity Framework Core
-  - ASP.NET Core Identity
-  
-- Hoặc **Node.js + TypeScript**
-  - NestJS framework
-  - TypeORM
-  - Passport.js
-
-### Database:
-- MySQL 8.0+
-- Connection pooling: HikariCP
-
-### Others:
-- JWT for authentication
-- Apache POI / EPPlus for Excel export
-- iText / PDFKit for PDF export
-- OpenAI API / Claude API for AI chatbot
-- Firebase Cloud Messaging for notifications
-
----
-
-## ✅ CHECKLIST HOÀN THÀNH
-
-### Thiết kế:
-- [x] ERD (đã có)
-- [x] Use Case Diagram (đã có)
-- [x] Class Diagram (đã thiết kế)
-- [ ] Sequence Diagrams (đã có template, cần render)
-- [ ] State Diagram (cần tự vẽ theo từng entity)
-
-### Implementation:
-- [ ] Setup project
-- [ ] Implement Domain Models
-- [ ] Implement Repositories
-- [ ] Implement Services
-- [ ] Implement Controllers
-- [ ] Implement Security
-- [ ] Implement Background Jobs
-- [ ] Implement AI Integration
-- [ ] Implement Bank Sync
-- [ ] Unit Testing
-- [ ] Integration Testing
-
-### Documentation:
-- [ ] API Documentation (Swagger/OpenAPI)
-- [ ] User Manual
-- [ ] Technical Documentation
-- [ ] Deployment Guide
-
----
-
-## 💡 MẸO VÀ LƯU Ý
-
-### 1. Về Class Diagram:
-- Diagram có thể rất lớn, hãy chia thành nhiều sub-diagrams:
-  - Core Domain Models
-  - Service Layer
-  - Repository Layer
-  - Utility & Helper classes
-
-### 2. Về SOLID:
-- Đừng over-engineering
-- Bắt đầu simple, refactor sau
-- Chỉ áp dụng pattern khi thực sự cần
-
-### 3. Về Implementation:
-- Implement theo thứ tự: Domain → Repository → Service → Controller
-- Test từng layer trước khi chuyển sang layer tiếp theo
-- Sử dụng Lombok để giảm boilerplate code
-
-### 4. Về Testing:
-- Viết test cho business logic (Service layer)
-- Mock dependencies
-- Coverage ít nhất 70%
-
-### 5. Về Báo cáo:
-- Giải thích TẠI SAO chọn abstract class/interface
-- Giải thích SOLID principles đã áp dụng
-- Đưa ví dụ code minh họa
-
----
-
-## 📞 HỖ TRỢ
-
-Nếu bạn cần hỗ trợ thêm về:
-- Thiết kế state diagram
-- Chi tiết implementation cho một phần cụ thể
-- Review code
-- Tối ưu hóa performance
-- ...
-
-Hãy hỏi thêm! Chúc bạn thành công với đồ án! 🎓🚀
-
----
-
-**Tác giả:** Claude Assistant  
-**Ngày tạo:** 04/02/2026  
+**Tác giả:** Van Truyen
+**Ngày tạo:** 02/024/2026  
 **Version:** 1.0
