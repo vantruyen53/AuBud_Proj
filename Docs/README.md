@@ -220,6 +220,105 @@
 ---
 ```
 
+## 1.6 Run project
+  ### Dowload project:
+    ```git clone https://github.com/vantruyen53/AuBud_Proj.git```
+  ### Run mobile app
+    - Dowload "Expo Go" app on CHplay or AppStore
+    - Navigate to Client folder
+    ``` cd Client ```
+    - Dowload dependences:
+    ```npm i```
+    - Run
+    ```npx expo start```
+    -Open camera on your phone and scan Qr
+  ### Run Server
+    - Back to root folder
+    ``` cd ..``
+    - Navigate to Server folder
+    ``` cd Server ```
+    - Dowload dependences:
+    ```npm i```
+
+    # Config redis
+    - Dowload docker
+    - Create file redis-docker.yml
+    - Paste content:
+    ```
+    version: '3.8'
+    services:
+      redis:
+        image: redis:latest
+        container_name: redis-server
+        restart: always
+        ports:
+          - "6379:6379"
+        volumes:
+          - redis_data:/data
+        command: ["redis-server", "--appendonly", "yes", "--requirepass", "root"]
+
+    volumes:
+    redis_data:
+    ```
+    - Open terminal in folder contain redis-docker.yml file
+    - Run
+    ``` docker compose -f redis-docker.yml -p redis-aubud-proj up -d```
+    - Open docker destop
+    - Run redis-aubud-proj container
+
+    # Config database
+      ## Run with docker destop
+        - Create file init.sql
+        - Paste sql code in file sql.md to create db
+        - Create aubud.yml
+        - Paste:
+        ```
+        version: '3.8'  
+
+        services:
+          db-mysql:
+            image: mysql:8.4.8
+            container_name: aubud-mysql
+            restart: always
+            environment:
+              MYSQL_DATABASE: aubud_proj  # Không dùng dấu gạch ngang
+              MYSQL_ROOT_PASSWORD: root
+            ports:
+              - "3307:3306"
+            volumes:
+              - mysql_data:/var/lib/mysql  # Lưu data persistent
+              - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Tự động chạy SQL khi khởi tạo
+
+        volumes:
+          mysql_data:
+        ```
+        - Run
+        ```docker compose -f aubud.yml -p aubud-sql up -d```
+        - Open docker destop
+        - Run aubud-sql container
+        
+      ## Run without docker destop
+        - Paste sql code in file sql.md
+        - Open mysql workbench
+        - Paste sql code in file sql.md to create db
+        - In ./Server/.env, update DB_PORT from 3307 to 3306
+      
+      ##Final
+        - Open terminal, run 
+        ```npm run dev```
+
+  ### Run Admin dashboard web
+   - Back to root folder
+    ``` cd ..```
+    - Navigate to Admin folder
+    ``` cd Server ```
+    - Dowload dependences:
+    ```npm i```
+    - Run
+    ```npm run dev```
+  
+
+
 **Tác giả:** Van Truyen
 **Ngày tạo:** 02/024/2026  
 **Version:** 1.0
