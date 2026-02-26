@@ -1,0 +1,415 @@
+import {Text,View,TouchableOpacity,TextInput,ScrollView,Modal,KeyboardAvoidingView,Platform, StyleSheet, Alert, Animated} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { MaterialIcons } from "@react-native-vector-icons/material-icons";
+import {mockCategoriesIncome,mockCategoriesSending, } from "@/src/store/seed/category";
+import {ICategory } from "@/src/models/IApp";
+import { Colors } from "@/src/constants/theme";
+import { HomeStackNavProp } from "@/src/models/types/RootStackParamList";
+import { listCatCharAlphaB } from "@/src/utils/generateSectionList ";
+import { SwipeListView } from "react-native-swipe-list-view";
+
+export default function AllCategory({route}:any) {
+    const navigation = useNavigation<HomeStackNavProp>();
+    const {typePar, setIsOpenCatNameInput, setSelectedCategory } = route.params
+    const typeParam=()=>{
+        if (typePar==="Sending")
+            return 'sending'
+        else if(typePar==="Income")
+            return 'income'
+        else return 'sending'
+    };
+    const type = typeParam();
+
+    const [isSearch, setIsSearch] = useState(false)
+    const [isShowModalAddCat, setIsShowModalEditCat]=useState(false)
+    const [selectedCat, setSelectedCat] = useState<ICategory>({id:'', name:'',type:'', iconName:'', iconColor:'', });
+
+    const [content, setContent] = useState("")
+    const [typeTab, setTypeTab]=useState<'sending'|'income'>(type)
+
+    const handleDelete = (id: string) => {
+        Alert.alert(
+          "Delete",
+          "Are your sure to delelte this category?",
+          [
+            { text: "Hủy", style: "cancel" },
+            {
+              text: "Xóa",
+              style: "destructive",
+              onPress: () => {},
+            },
+          ],
+        );
+      };
+    const handleEdit = (id: string) => {
+        Alert.alert(
+          "Edit",
+          "Are your sure to edit this category?",
+          [
+            { text: "Hủy", style: "cancel" },
+            {
+              text: "Xóa",
+              style: "destructive",
+              onPress: () => {},
+            },
+          ],
+        );
+      };
+
+    const sections = useMemo(()=>{
+        switch (typeTab){
+            case 'sending':
+                return listCatCharAlphaB(mockCategoriesSending)
+            case 'income':
+                return listCatCharAlphaB(mockCategoriesIncome)
+            default:
+                return null
+        } 
+    }, [mockCategoriesIncome,mockCategoriesSending])
+
+    const renderSectionHeader = (infor:{section:any})=>(
+        <View style={{ paddingTop: 10, paddingBottom: 10, marginStart:10 }}>
+            <Text style={{ fontWeight: "600", fontSize: 14 }}>{infor.section.key}</Text>
+        </View>)
+    const renderItem = (data:any, rowMap:any)=>{
+        const item = data.item as ICategory;
+        return(
+            <TouchableOpacity
+                key={item.id}
+                style={styles.catItem}
+                onPress={() => {
+                  setSelectedCat({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor})
+                  setSelectedCategory({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor})
+                  setIsOpenCatNameInput&&setIsOpenCatNameInput(true)
+                  navigation.goBack();
+                }}
+            >
+                <View
+                  style={[
+                    styles.catIconBg,
+                    { backgroundColor: `rgba(${item.iconColor},0.1)` },
+                    selectedCat.id === item.id && styles.catIconBgSelected,
+                  ]}
+                >
+                  <MaterialIcons
+                    name={item.iconName as any}
+                    size={28}
+                    color={`rgb(${item.iconColor})`}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.catName,
+                    selectedCat.id === item.id && styles.catNameSelected,
+                  ]}
+                >
+                  {item.name}
+                </Text>
+            </TouchableOpacity>
+        )
+    }
+    const renderHiddenItem = (data: any) => {
+        const item = data.item;
+        return (
+            <View style={styles.hiddenContainer}>
+                {/* Nút Edit nằm bên trái trong cụm nút ẩn */}
+                <TouchableOpacity
+                    onPress={() => handleEdit(item.id)}
+                    style={[styles.hiddenBtn, { backgroundColor: '#12D0FF' }]}
+                >
+                    <MaterialIcons name="edit" size={20} color="#FFF" />
+                </TouchableOpacity>
+
+                {/* Nút Delete nằm bên phải ngoài cùng */}
+                <TouchableOpacity
+                    onPress={() => handleDelete(item.id)}
+                    style={[styles.hiddenBtn, { backgroundColor: '#EF4444' }]}
+                >
+                    <MaterialIcons name="delete" size={20} color="#FFF" />
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
+  return (
+    <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1}}
+        >
+            {/* Header  */}
+            <View style={styles.header}>
+                {
+                    isSearch ? (
+                    <>
+                        <TouchableOpacity style={styles.backButton} onPress={()=>setIsSearch(false)}>
+                        <MaterialIcons name="arrow-back-ios" size={16}/>
+                        </TouchableOpacity>
+                        <View style={styles.formSearch}>
+                        <TextInput 
+                            value={content}
+                            onChangeText={setContent}
+                            style={styles.contentSearch}
+                            autoFocus
+                        />
+                        {
+                            content.length > 0 ? 
+                            <TouchableOpacity onPress={()=>setContent("")} style={styles.clearFrom}>
+                            <MaterialIcons name="close"/>
+                            </TouchableOpacity> : ""
+                        }
+                        </View>
+                        <TouchableOpacity style={styles.filterSearch} onPress={()=>{}}>
+                        <MaterialIcons name="filter-list" size={20} color={Colors.light.iconLight}/>
+                        </TouchableOpacity>
+                    </>
+                    ) : (
+                    <>
+                        <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                        >
+                        <MaterialIcons
+                            name="arrow-back-ios"
+                            size={20}
+                            color={Colors.light.iconLight}
+                        />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>History transaction</Text>         
+                        <TouchableOpacity
+                        style={styles.searchButton}
+                        onPress={() => setIsSearch(true)}
+                        >
+                        <MaterialIcons
+                            name="search"
+                            size={20}
+                            color={Colors.light.tabIconDefault}
+                        />
+                        </TouchableOpacity>
+
+                    </>
+                    )
+                }
+            </View>
+
+            {/* type tabs  */}
+            <View style={styles.headerTabs}>
+                <TouchableOpacity
+                    style={[styles.typeTab, typeTab==="sending"?styles.typeTabAction: null]}
+                    onPress={()=>setTypeTab('sending')}
+                >
+                    <Text style={[styles.tabText, typeTab==="sending"?styles.tabTextAction: null]}>Sending</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.typeTab, typeTab==="income"?styles.typeTabAction: null]}
+                    onPress={()=>setTypeTab('income')}
+                >
+                    <Text style={[styles.tabText, typeTab==="income"?styles.tabTextAction: null]}>Income</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* category list  */}
+            <SwipeListView
+                    useSectionList
+                    sections={sections as any}
+                    keyExtractor={(item: ICategory) => item.id}
+                    rightOpenValue={-130}
+                    disableRightSwipe={true}
+                    swipeToOpenPercent={40}
+                    showsVerticalScrollIndicator={false}
+                    renderSectionHeader={renderSectionHeader}
+                    renderItem={renderItem}
+                    renderHiddenItem={renderHiddenItem}
+            />
+
+            {/* fab  */}
+            <TouchableOpacity 
+                style={styles.fab} 
+                onPress={() => setIsShowModalEditCat(true)}
+            >
+                <MaterialIcons name="add" size={32} color="#FFF" />
+            </TouchableOpacity>
+        </KeyboardAvoidingView>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+    container:{
+            flex: 1,
+            backgroundColor: Colors.light.inputBg,
+            padding: 16,
+            paddingBottom:0,
+            position:'relative'
+    }, 
+        // Header
+        header: {
+            position: "relative",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        backButton: {
+            width: 30,
+            height: 30,
+            borderRadius: 20,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        headerTitle: {
+            textAlign:"center",
+            fontSize: 18,
+            fontWeight: "600",
+            color: Colors.light.textMain,
+        },
+        searchButton: {
+            width: 40,
+        },
+        formSearch:{
+            flex:1,
+            backgroundColor:"#f9fdfe",
+            borderWidth:1,
+            borderStyle:"solid",
+            borderColor: Colors.light.border,
+            flexDirection: "row",
+            alignItems: "center",
+            padding:5,
+            borderRadius:10
+        },
+        contentSearch:{
+            flex:1,
+        },
+        clearFrom:{
+            width:20,
+            height:20,
+            borderRadius: 20,
+            backgroundColor: "#e0f5ffe0",
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        filterSearch:{
+            marginStart:5
+        },
+
+        // header tab 
+        headerTabs:{
+            flexDirection:'row',
+            borderBottomWidth:1,
+            borderBottomColor:'#e1e1e1',
+        },
+        typeTab:{
+            flex:1,
+            justifyContent:'center',
+            paddingVertical:15,
+            alignItems:'center',
+        },
+        typeTabAction:{
+            borderBottomWidth:2,
+            borderBottomColor:Colors.light.primary,
+        },
+        tabText:{
+           fontWeight:'600',
+           fontSize:16 
+        },
+        tabTextAction:{
+            color:Colors.light.primary
+        },
+
+    // renderHiddenItem
+    hiddenContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        backgroundColor: Colors.light.inputBg, // Màu nền phía sau khi vuốt
+        paddingRight: 10,
+    },
+    hiddenBtn: {
+        width: 50,
+        height: 50,
+        borderRadius: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10, // Khoảng cách giữa 2 nút
+        // Shadow nhẹ cho nút trông nổi hơn
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    //   Delete category item 
+    deleteAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 50,
+    height: 50,
+    alignSelf: 'flex-end',
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 12,
+  },
+  deleteActionContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteActionText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+    //fab
+    fab:{
+        position: 'absolute',
+        bottom: 30,
+        right: 24,
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        backgroundColor: Colors.light.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: Colors.light.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
+        zIndex: 100,
+    },
+
+    // category item 
+    catItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: Colors.light.inputBg,
+        gap: 12,
+        // Thêm border bottom nhẹ để phân cách nếu muốn
+        borderBottomWidth: 0.5,
+        borderBottomColor: '#F1F5F9',
+    },
+    catIconBg: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    catIconBgSelected: {
+        borderWidth: 2,
+        borderColor: Colors.light.primary,
+    },
+    catName: {
+        fontSize: 15, // Tăng nhẹ cho dễ đọc
+        color: Colors.light.textMain,
+        fontWeight: '500',
+    },
+    catNameSelected: {
+        fontWeight: '700',
+        color: Colors.light.primary,
+    },
+})
