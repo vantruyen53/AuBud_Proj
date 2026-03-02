@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Client",
+    "slug": "Client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/_logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./src/assets/images/_logo.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-secure-store"
+    ]
+  }
+}

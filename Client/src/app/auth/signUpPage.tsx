@@ -1,0 +1,212 @@
+import { useState } from "react";
+import { Dimensions } from "react-native";
+import { MaterialIcons } from "@react-native-vector-icons/material-icons";
+import { Eye, EyeOff } from "lucide-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import styles from "../../assets/styles/authStyle";
+import { LinearGradient } from "expo-linear-gradient";
+import { linearGradient, Colors } from "@/src/constants/theme";
+import { useNavigation } from "@react-navigation/native";
+import { AuthNavigationProp } from "../../models/types/RootStackParamList";
+
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+export default function SignUpScreen() {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { width } = Dimensions.get("window");
+
+  const navigation = useNavigation<AuthNavigationProp>();
+
+  const handleRegister = () => {
+    // TODO: Implement registration logic
+    console.log("Register with:", fullName, email, password);
+    navigation.navigate("OTPVerificationScreen");
+  };
+
+  const handleSocialRegister = (provider: string) => {
+    console.log("Register with:", provider);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={linearGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.linearGradient, { width }]}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <MaterialIcons
+                name="arrow-back-ios"
+                size={20}
+                color={Colors.light.iconLight}
+              />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>AuBud</Text>
+            <View style={styles.placeholder} />
+          </View>
+          {/* Mascot */}
+          <View style={styles.mascotContainer}>
+            <Image
+              source={require("../../assets/images/_logo.png")}
+              style={styles.mascot}
+              resizeMode="contain"
+            />
+          </View>
+          {/* Welcome Text */}
+          <View style={styles.welcomeContainer}>
+            <Text style={styles.welcomeTitle}>Register New Account</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Let's smart budget management right now
+            </Text>
+          </View>
+          {/* Form */}
+          <View style={styles.formContainer}>
+            {/* Full Name Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Full name</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Full name"
+                  placeholderTextColor={Colors.light.primaryLight}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+            {/* Email Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your email"
+                  placeholderTextColor={Colors.light.primaryLight}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+            {/* Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your password"
+                  placeholderTextColor={Colors.light.primaryLight}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <Eye size={22} color={Colors.light.iconLight} />
+                  ) : (
+                    <EyeOff size={22} color={Colors.light.iconLight} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+            {/* Confirm Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm password</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirn password"
+                  placeholderTextColor={Colors.light.primaryLight}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showPassword ? (
+                    <Eye size={22} color={Colors.light.iconLight} />
+                  ) : (
+                    <EyeOff size={22} color={Colors.light.iconLight} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+            {/* Register Button */}
+            <TouchableOpacity
+              style={styles.authButton}
+              onPress={handleRegister}
+            >
+              <Text style={styles.authButtonText}>Sign up</Text>
+            </TouchableOpacity>
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            {/* Social Login Buttons */}
+            <View style={styles.socialButtons}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => handleSocialRegister("google")}
+              >
+                <Image
+                  source={{ uri: "https://www.google.com/favicon.ico" }}
+                  style={styles.socialIcon}
+                />
+              </TouchableOpacity>
+            </View>
+            {/* Login Link */}
+            <View style={styles.authContainer}>
+              <Text style={styles.authText}>Have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Text style={styles.authLink}>Sign in</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
