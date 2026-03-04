@@ -1,11 +1,14 @@
 import { NavigationProp } from '@react-navigation/native';
-import { ICategory } from '../IApp';
+import { ICategory } from '../interface/Entities';
 
 export type RootStackParamList = {
   LoginScreen: undefined;
   ForgotPasswordScreen: undefined;
   SignUpScreen: undefined,
-  OTPVerificationScreen: undefined;
+  OTPVerificationScreen: {
+    email: string;
+    type: "register" | "forgot-password";
+  };
   ResetPasswordScreen: {
     email: string;
   }

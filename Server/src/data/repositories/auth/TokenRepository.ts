@@ -1,7 +1,7 @@
-import type { ITokenRepository } from "../../domain/interfaces/auth/ITokenRepository.js";
-import pool from "../../config/dbConfig.js";
+import type { ITokenRepository } from "../../../domain/models/auth/ITokenRepository.js";
+import pool from "../../../config/dbConfig.js";
 import type { RowDataPacket } from "mysql2";
-import { ServerResult } from "../../domain/entities/authEntities.js";
+import {ServerResult} from '../../../domain/entities/appEntities.js';
 
 export default class TokenRepositoryImpl implements ITokenRepository {
   async saveToken(
@@ -19,11 +19,11 @@ export default class TokenRepositoryImpl implements ITokenRepository {
   }
 
   async deleteToken(tokenHash: string): Promise<ServerResult> {
-    try{
+    try {
       const sql = `DELETE FROM token WHERE token_hash = ?`;
       await pool.execute(sql, [tokenHash]);
-      return new ServerResult(true, 'Logout successful, token revoked')
-    } catch(err){
+      return new ServerResult(true, "Logout successful, token revoked");
+    } catch (err) {
       return new ServerResult(false, `Delete token errore: ${err}`);
     }
   }
@@ -37,14 +37,14 @@ export default class TokenRepositoryImpl implements ITokenRepository {
   }
 
   async findLastDeviceByUserId(userId: string): Promise<string | null> {
-  // Lấy session gần nhất của user, trừ session vừa tạo
-  const sql = `
+    // Lấy session gần nhất của user, trừ session vừa tạo
+    const sql = `
     SELECT device_info FROM token 
     WHERE user_id = ? 
     ORDER BY created_at DESC 
     LIMIT 1 OFFSET 1
   `;
-  const [rows] = await pool.execute<RowDataPacket[]>(sql, [userId]);
-  return rows[0]?.device_info ?? null;
-}
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, [userId]);
+    return rows[0]?.device_info ?? null;
+  }
 }

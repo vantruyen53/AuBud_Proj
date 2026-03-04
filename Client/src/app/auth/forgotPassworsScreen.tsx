@@ -11,19 +11,32 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View, Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mainColor, Colors } from "@/src/constants/theme";
+import { postEmailToVerify } from "@/src/services/auth/resetPasswordService";
+import { validateEmail } from "@/src/utils/helper";
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const navigation = useNavigation<AuthNavigationProp>();
 
-  const handleSendCode = () => {
-    // TODO: Send verification code logic
-    console.log("Send code to:", email);
-    navigation.navigate("OTPVerificationScreen");
+  const handleSendCode = async () => {
+    if (!email.trim())           return "Vui lòng nhập email";
+    if (!validateEmail(email))   return "Email không hợp lệ";
+      
+    const result = await postEmailToVerify(email.trim().toLowerCase());
+    if (!result.success) {
+      console.log('Status:', result.success);
+      console.log("Error verifying email:", result.message);
+      Alert.alert(result.message);
+      return;
+    }
+    navigation.navigate("OTPVerificationScreen", {
+        email: email.trim().toLowerCase(),
+        type: "forgot-password",
+      });
   };
 
   return (

@@ -4,15 +4,22 @@ import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import { ScrollView } from "react-native-gesture-handler";
 import {toInitialFormatCurrency} from '../utils/format';
-import { IWallet, IDebtMaster, ISaving, ICategory } from "../models/IApp";
+import { IDebt } from "../models/interface/Entities";
 import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { HomeStackNavProp } from "../models/types/RootStackParamList";
+import { Colors } from "../constants/theme";
+import { AVAILABLE_ICONS_SENDING, AVAILABLE_ICONS_INCOME, AVAILABLE_COLORS } from "@/src/store/seed/iconList";
+
+import { IWallet, ISaving, ICategory } from "../models/IApp";
 
 export  function ModalForm(props:any) {
   let amount = ""
-  if(props.formData.amount != undefined || props.formData.amount != null)
-    amount = toInitialFormatCurrency(props.formData.amount)
+
+  if(props.typeAction==="edit")
+    if(props.formData.amount !== undefined)
+      amount = toInitialFormatCurrency(props.formData?.amount)
+
   return (
     <Modal
         visible={props.isVisible}
@@ -90,7 +97,7 @@ export  function ModalForm(props:any) {
                               <TextInput
                                   style={styles.input}
                                   placeholder="Ví dụ: Tiền mặt, Vietcombank..."
-                                  value={props.formData.value}
+                                  value={props.formData?.name}
                                   onChangeText={(val) => props.setFormData({...props.formData, name: val})}
                               />
                           </>
@@ -103,7 +110,7 @@ export  function ModalForm(props:any) {
                           style={styles.input}
                           placeholder="0"
                           keyboardType="numeric"
-                          value={props.formData.value}
+                          value={props.formData?.balance?.toString()}
                           onChangeText={(val) => props.setFormData({...props.formData, balance: val})}
                       />
                       </>
@@ -115,7 +122,7 @@ export  function ModalForm(props:any) {
                       style={styles.input}
                       placeholder="0"
                       keyboardType="numeric"
-                      value={props.formData.value}
+                      value={props.formData?.target?.toString()}
                       onChangeText={(val) => props.setFormData({...props.formData, target: val})}
                     />
                   </>
@@ -125,16 +132,16 @@ export  function ModalForm(props:any) {
                     <Text style={styles.inputLabel}>Type</Text>
                     <View style={styles.typeRow}>
                       <TouchableOpacity 
-                        style={[styles.typeBtn, props.formData.type === 'borrow' && styles.typeBtnActive]} 
-                        onPress={() => props.setFormData({...props.formData, type: 'borrow'})}
+                        style={[styles.typeBtn, props.formData?.type === 'loan_from' && styles.typeBtnActive]} 
+                        onPress={() => props.setFormData({...props.formData, type: 'loan_from'})}
                       >
-                        <Text style={[styles.typeBtnText, props.formData.type === 'borrow' && styles.typeBtnTextActive]}>Đi vay</Text>
+                        <Text style={[styles.typeBtnText, props.formData?.type === 'loan_from' && styles.typeBtnTextActive]}>Đi vay</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.typeBtn, props.formData.type === 'lend' && styles.typeBtnActive]} 
-                        onPress={() => props.setFormData({...props.formData, type: 'lend'})}
+                        style={[styles.typeBtn, props.formData?.type === 'loan_to' && styles.typeBtnActive]} 
+                        onPress={() => props.setFormData({...props.formData, type: 'loan_to'})}
                       >
-                        <Text style={[styles.typeBtnText, props.formData.type === 'lend' && styles.typeBtnTextActive]}>Cho vay</Text>
+                        <Text style={[styles.typeBtnText, props.formData?.type === 'loan_to' && styles.typeBtnTextActive]}>Cho vay</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -142,8 +149,8 @@ export  function ModalForm(props:any) {
                     <TextInput
                       style={styles.input}
                       placeholder="Tên người vay/cho vay"
-                      value={props.formData.to_other}
-                      onChangeText={(val) => props.setFormData({...props.formData, to_other: val})}
+                      value={props.formData?.partnerName}
+                      onChangeText={(val) => props.setFormData({...props.formData, partnerName: val})}
                     />
 
                     <Text style={styles.inputLabel}>Total amount</Text>
@@ -151,8 +158,8 @@ export  function ModalForm(props:any) {
                       style={styles.input}
                       placeholder="0"
                       keyboardType="numeric"
-                      value={props.formData.amount?.toString()}
-                      onChangeText={(val) => props.setFormData({...props.formData, amount: val})}
+                      value={props.formData?.totalAmount?.toString()}
+                      onChangeText={(val) => props.setFormData({...props.formData, totalAmount: val})}
                     />
 
                     <Text style={styles.inputLabel}>Remain amount</Text>
@@ -160,7 +167,7 @@ export  function ModalForm(props:any) {
                       style={styles.input}
                       placeholder="0"
                       keyboardType="numeric"
-                      value={props.formData.remaining?.toString()}
+                      value={props.formData?.remaining?.toString()}
                       onChangeText={(val) => props.setFormData({...props.formData, remaining: val})}
                     />
                   </>
@@ -170,7 +177,7 @@ export  function ModalForm(props:any) {
                   {props.typeAction==='edit' &&
                     <TouchableOpacity 
                       style={styles.deleteBtnModal} 
-                      onPress={()=>props.onPressDelete(props.type, )}
+                      onPress={()=>props.onPressDelete(props?.type, props.formData)}
                     >
                       <MaterialIcons name="delete-forever" size={20} color="#EF4444" />
                       <Text style={styles.deleteBtnModalText}>Delete</Text>
@@ -286,8 +293,7 @@ export function ModalWallet(props:any){
 } 
 
 export function ModalDebts(props:any){
-  const [val, setVal] = useState<string>('')
-  let debtsData:IDebtMaster[]=props.data;
+  let debtsData:IDebt[]=props.data;
   return(
     <Modal
       animationType="fade"
@@ -306,32 +312,18 @@ export function ModalDebts(props:any){
             </TouchableOpacity>
           </View>
 
-          <View style={{flexDirection:'row', gap:10}}>
-            <TextInput 
-              placeholder="Selecte a debt/loan or add new" 
-              style={styles.addNewInput}
-              onChangeText={(val)=>setVal(val)}
-            />
-            <TouchableOpacity 
-              style={styles.addNewBtn}
-              onPress={()=>{props.onChangeText({partnerName:val}),props.onPressClose();}}
-            >
-              <Text style={styles.addNewText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Data  */}
           {debtsData.map((item) => {
             const isLoanFrom = item.type === "loan_from";
             const mainColor = isLoanFrom ? '#059669' : '#d90000';
             const bgColor = isLoanFrom ? '#05966915' : '#d9000015';
-            const isActive = props.debt.partnerName === item.partnerName;
+            const isActive = props.debt === item.id;
 
             return (
               <TouchableOpacity
                 key={item.id}
                 onPress={() => {
-                  props.onSelect({ partnerName: item.partnerName });
+                  props.onSelect(item.id, item.partnerName, item.remaining);
                   props.onPressClose();
                 }}
                 style={[styles.debtItem, isActive && styles.debtItemAction]}
@@ -350,7 +342,7 @@ export function ModalDebts(props:any){
                       {isLoanFrom ? `Borrowed from` : `Lent to`}
                     </Text>
                     <Text style={styles.partnerNameText}>{item.partnerName}</Text>
-                    <Text style={styles.timeLoan}>{item.createAt}</Text>
+                    <Text style={styles.timeLoan}>{item.createdAt}</Text>
                   </View>
                 </View>
 
@@ -379,7 +371,7 @@ export function ModalDebts(props:any){
 }
 
 export function ModalSaving(props:any){
-  let saingList:ISaving[]=props.data;
+  let savingList:ISaving[]=props.data;
   return(
     <Modal
       animationType="fade"
@@ -399,8 +391,8 @@ export function ModalSaving(props:any){
           </View>
 
           {/* render data  */}
-          {saingList.map((item)=>{
-            const isActive = props.saving.id === item.id;
+          {savingList.map((item)=>{
+            const isActive = props.selected === item.id;
             const mainColor ="#12D0FF";
             const remainBalance = (target:number, balance: number)=>{
               const re = target-balance
@@ -410,7 +402,7 @@ export function ModalSaving(props:any){
                 <TouchableOpacity
                   key={item.id}
                   onPress={() => {
-                    props.onSelect({ name: item.name });
+                    props.onSelect(item.id, item.name, item.balance);
                     props.onPressClose();
                   }}
                   style={[styles.debtItem, isActive && styles.debtItemAction]}
@@ -572,6 +564,85 @@ export function ModalBudget({visible,onPressClose, onPressSave, nav,selectedCate
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+    </Modal>
+  )
+}
+
+export function ModalCategory({isModalVisible, setIsModalVisible, isEditing,
+  handleSave,categoryForm,setCategoryForm, typeTab}:any){
+    const currentIcons = typeTab === 'sending'?AVAILABLE_ICONS_SENDING : AVAILABLE_ICONS_INCOME;
+  return(
+    <Modal
+      visible={isModalVisible}
+      animationType="slide"
+      transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+              <MaterialIcons name="close" size={24} color={Colors.light.textMain} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>{isEditing ? 'Edit Category' : 'New Category'}</Text>
+            <TouchableOpacity onPress={()=>handleSave()}>
+              <MaterialIcons name="check" size={24} color={Colors.light.primary} />
+            </TouchableOpacity>
+          </View>
+    
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Icon Preview & Name Input */}
+            <View style={styles.inputSection}>
+              <View style={[styles.previewIconBg, { backgroundColor: `rgba(${categoryForm.iconColor}, 0.1)` }]}>
+                <MaterialIcons name={categoryForm.iconName} size={40} color={`rgb(${categoryForm.iconColor})`} />
+              </View>
+              <View style={styles.nameInputContainer}>
+                <Text style={styles.inputLabel}>Enter category name</Text>
+                <TextInput
+                  style={styles.nameInput}
+                  value={categoryForm.name}
+                  onChangeText={(text) => setCategoryForm({ ...categoryForm, name: text })}
+                  placeholder="Gifts"
+                  placeholderTextColor={Colors.light.placeholder}
+                />
+              </View>
+            </View>
+    
+            {/* Color Selection */}
+              <Text style={styles.sectionTitle}>Select Color</Text>
+              <View style={styles.colorGrid}>
+                {AVAILABLE_COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    onPress={() => setCategoryForm({ ...categoryForm, iconColor: color })}
+                    style={[
+                      styles.colorCircle,
+                      { backgroundColor: `rgb(${color})` },
+                      categoryForm.iconColor === color && styles.colorCircleSelected
+                    ]}
+                  />
+                ))}
+              </View>
+    
+              {/* Icon Selection */}
+              <Text style={styles.sectionTitle}>Select Icon</Text>
+              <View style={styles.iconGrid}>
+                {currentIcons.map((icon: string) => (
+                  <TouchableOpacity
+                    key={icon}
+                    onPress={() => setCategoryForm({ ...categoryForm, iconName: icon })}
+                    style={[
+                      styles.iconBox,
+                      categoryForm.iconName === icon && { borderColor: Colors.light.primary, borderWidth: 2 }
+                    ]}
+                   >
+                    <MaterialIcons name={icon as any} size={28} color={categoryForm.iconName === icon ? `rgb(${categoryForm.iconColor})` : Colors.light.textSub} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
     </Modal>
   )
 }

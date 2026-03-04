@@ -4,7 +4,7 @@ import type {
   NotificationChannel,
   NotificationPayload,
   NotificationResult,
-} from "../domain/interfaces/auth/INotification.js";
+} from "../domain/models/auth/INotification.js";
 export class EmailNotificationChannel implements INotificationChannel {
   readonly channel: NotificationChannel = "email";
   private transporter = nodemailer.createTransport({

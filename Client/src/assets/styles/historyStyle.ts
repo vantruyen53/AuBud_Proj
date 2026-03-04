@@ -7,7 +7,7 @@ const styles = StyleSheet.create({
     container:{
         flex: 1,
         backgroundColor: Colors.light.inputBg,
-        padding: 16,
+        // padding: 16,
         paddingBottom:0,
         position:'relative'
     },
@@ -18,7 +18,8 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom:20,
+        marginBottom:10,
+         backgroundColor:"#12D0FF",
     },
     backButton: {
         width: 30,
@@ -29,9 +30,9 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         textAlign:"center",
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "600",
-        color: Colors.light.textMain,
+        color: "#fff",
     },
     searchButton: {
         width: 40,
@@ -49,6 +50,7 @@ const styles = StyleSheet.create({
     },
     contentSearch:{
         flex:1,
+        paddingVertical:5,
     },
     clearFrom:{
         width:20,
@@ -62,28 +64,43 @@ const styles = StyleSheet.create({
         marginStart:5
     },
 
+    containerList:{
+      flex:1,
+      padding:16,
+      borderTopLeftRadius: 40,
+      borderTopRightRadius: 40,
+      marginTop: -30,
+      paddingBottom: 0,
+      paddingTop:0,
+      overflow:'hidden',
+      backgroundColor: "#fff",
+    },
+
     // selecte time 
     selecteTime:{
-        marginTop:10,
-        marginBottom:10,
-        gap:10,
+      marginTop:20,
+      gap:10,
+      alignItems: 'center', 
     },
-    row: {
-        flexDirection: 'row', 
-        alignItems: 'center', 
+    tabsSelectTime:{
+      flexDirection:'row', 
+      gap:5,
+      borderWidth:4,
+      backgroundColor: "#089abf",
+      borderColor:"#089abf",
+      borderRadius:10,
     },
     selecteTimeBTn:{
-        backgroundColor: '#fff',
         borderRadius:10,
-        borderWidth:1,
-        borderStyle: "solid",
-        borderColor: Colors.light.placeholder,
         padding:7,
         flexDirection:'row',
         gap:7,
+        width:120,
+        justifyContent:'center',
     },
     selecteTimeText:{
         fontWeight:"600",
+        
     },
     placeHolder:{
         flex:1,
@@ -178,7 +195,6 @@ const styles = StyleSheet.create({
     // Segment Control (Chi/Thu) 
     segmentControlContainer:{
         flexDirection: 'row',
-        backgroundColor: '#F1F5F9',
         borderRadius: 12,
         padding: 4,
         marginBottom: 20,
@@ -188,6 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 10,
+    
   },
   segmentButtonActive: {
     backgroundColor: Colors.light.primary,
@@ -205,19 +222,26 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: '#FFF',
   },
+  noTransactionsText: {
+    fontSize: 14,
+    color: Colors.light.placeholder,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 20,
+  },
 
 //   Delete transactio item 
     deleteAction: {
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 80,
-    height: '85%',
-    alignSelf: 'flex-end',
-    borderRadius: 20,
-    marginRight: 10,
-    marginBottom: 12,
-  },
+      backgroundColor: '#EF4444',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 80,
+      height: '85%',
+      alignSelf: 'flex-end',
+      borderRadius: 20,
+      marginRight: 10,
+      marginBottom: 12,
+    },
   deleteActionContent: {
     alignItems: 'center',
     justifyContent: 'center',

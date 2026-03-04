@@ -1,4 +1,4 @@
-import type { ITokenRepository } from "../domain/interfaces/auth/ITokenRepository.js";
+import type { ITokenRepository } from "../domain/models/auth/ITokenRepository.js";
 import crypto from "crypto";
 import { generateToken, RefreshToken } from "../utils/helpers/jwt.js";
 
@@ -37,9 +37,8 @@ export class TokenService {
       .createHash("sha256")
       .update(refreshToken)
       .digest("hex");
-      console.log('==tokenHash: ', tokenHash)
     const result = await this.tokenRepo.deleteToken(tokenHash);
-    return {status: result.status, message: result.message}
+    return { status: result.status, message: result.message };
   }
 
   async validateRefreshToken(refreshToken: string): Promise<boolean> {
@@ -61,6 +60,6 @@ export class TokenService {
   }
 
   async findLastDeviceByUserId(userId: string): Promise<string | null> {
-  return this.tokenRepo.findLastDeviceByUserId(userId);
-}
+    return this.tokenRepo.findLastDeviceByUserId(userId);
+  }
 }

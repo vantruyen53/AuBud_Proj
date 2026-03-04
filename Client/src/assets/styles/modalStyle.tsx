@@ -326,6 +326,72 @@ const styles = StyleSheet.create({
         color: Colors.light.textMain,
         fontWeight:'700',
     },
+
+    //CATEGORY
+    inputSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        marginBottom: 24,
+    },
+    previewIconBg: {
+        width: 64,
+        height: 64,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+     nameInputContainer: {
+        flex: 1,
+    },
+    nameInput: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: Colors.light.textMain,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.light.textSub,
+        marginBottom: 16,
+        marginTop: 8,
+    },
+    colorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 24,
+    },
+    colorCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    colorCircleSelected: {
+        borderColor: Colors.light.primary,
+        transform: [{ scale: 1.1 }],
+    },
+    iconGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        paddingBottom: 40,
+    },
+    iconBox: {
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        backgroundColor: '#F8FAFC',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+    },
 })
 
 export default styles

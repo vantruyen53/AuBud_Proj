@@ -1,10 +1,11 @@
 type AppContextType = {
     isAuthenticated: boolean;
     isLoading: boolean;
-    accessToken: String;
-    refreshToken: String,
-    id: String,
-    role: String,
+    accessToken: string;
+    refreshToken: string,
+    id: string,
+    userName: string,
+    role: string,
     isShowData: boolean,
     signIn: (accessToken: string, refreshToken: string) => Promise<void>;
     signOut: ()=>Promise<void>

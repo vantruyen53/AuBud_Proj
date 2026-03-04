@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Dimensions } from "react-native";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { Eye, EyeOff } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,9 +7,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { linearGradient, Colors } from "@/src/constants/theme";
 import { useNavigation } from "@react-navigation/native";
 import { AuthNavigationProp } from "../../models/types/RootStackParamList";
-
+import { registerService } from "../../services/auth/registerService";
+import { validateEmail, validateOTP, passwordRegex } from "@/src/utils/helper";
 import {
-  Image,
+  Image, Alert, Dimensions,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -21,6 +21,22 @@ import {
   View,
 } from "react-native";
 
+function validateForm(
+  fullName: string,
+  email: string,
+  password: string,
+  confirmPassword: string
+): string | null {
+  if (!fullName)        return "Vui lòng nhập họ tên";
+  if (!email.trim())           return "Vui lòng nhập email";
+  if (!validateEmail(email))   return "Email không hợp lệ";
+  if (!password)               return "Vui lòng nhập mật khẩu";
+  if (!passwordRegex(password))
+    return "Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt";
+  if (password !== confirmPassword) return "Mật khẩu xác nhận không khớp";
+  return null;
+}
+
 export default function SignUpScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,15 +44,64 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
   const { width } = Dimensions.get("window");
 
   const navigation = useNavigation<AuthNavigationProp>();
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
-    console.log("Register with:", fullName, email, password);
-    navigation.navigate("OTPVerificationScreen");
+  const handleRegister =async  () => {
+    const validationError = validateForm(
+      fullName,
+      email,
+      password,
+      confirmPassword
+    );
+
+    if (validationError) {
+      Alert.alert("Thông tin không hợp lệ", validationError);
+      return;
+    }
+
+    setIsLoading(true);
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try{
+      console.log("1 ==================== Registering started")
+      const result = await registerService({
+        userName: fullName,
+        email:    email.trim().toLowerCase(),
+        password,
+      });
+
+      if (!result.status) {
+        Alert.alert("Đăng ký thất bại", result.message);
+        return;
+      }
+
+      navigation.navigate("OTPVerificationScreen", {
+        email: email.trim().toLowerCase(),
+        type: "register",
+      });
+    } catch (error: any){
+        // Phân loại lỗi để hiển thị thông báo phù hợp
+        if (error.message?.includes("public key")) {
+          Alert.alert(
+            "Lỗi kết nối",
+            "Không thể kết nối đến server. Vui lòng thử lại."
+          );
+        } else if (error.message?.includes("Network")) {
+          Alert.alert(
+            "Lỗi mạng",
+            "Kiểm tra kết nối internet của bạn và thử lại."
+          );
+        } else {
+          Alert.alert("Lỗi", error.message ?? "Đã có lỗi xảy ra. Vui lòng thử lại.");
+        }
+      } finally {
+        // Luôn tắt loading dù thành công hay thất bại
+        setIsLoading(false);
+      }
   };
 
   const handleSocialRegister = (provider: string) => {

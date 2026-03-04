@@ -1,7 +1,7 @@
 import type {
   NotificationChannel,
   INotificationChannel,
-} from "../../domain/interfaces/auth/INotification.js";
+} from "../../domain/models/auth/INotification.js";
 import {
   EmailNotificationChannel,
   PushNotificationChannel,

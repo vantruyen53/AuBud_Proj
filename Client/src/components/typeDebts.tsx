@@ -7,8 +7,6 @@ import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-
 
 export default function TypeDebt(props:any) {
     const data= [
-        {type:'loan_to'},
-        {type:'loan_from'},
         {type:'repay_to'},
         {type:'repay_from'},
     ];
@@ -17,29 +15,21 @@ export default function TypeDebt(props:any) {
         const isSelected = props.isSelected===item.type;
         const itemName=(type:string)=>{
             switch(type){
-                case 'loan_to':
-                    return 'cash-fast'
-                case 'loan_from':
-                    return 'hand-coin'
                 case 'repay_to':
-                    return 'cash-check'
+                    return 'cash-fast'
                 case 'reay_from':
                     return 'cash-refund'
                 default:
-                    return 'plus-minus'
+                    return 'cash-refund'
                 
             }
         }
         const iconColor=(type:string)=>{
             switch(type){
-                case 'loan_to':
-                    return '240, 40, 0'
-                case 'loan_from':
-                    return '0, 200, 80'
                 case 'repay_to':
-                    return '100, 116, 139'
+                    return '240, 40, 0'
                 case 'repay_from':
-                    return '255, 193, 7'
+                    return '0, 200, 80'
                 default:
                     return '255, 255, 255'
                 
@@ -47,7 +37,7 @@ export default function TypeDebt(props:any) {
         }
         return(
             <TouchableOpacity
-                onPress={()=>props.onSelecte({type:item.type})}
+                onPress={()=>props.onSelecte(item.type)}
                 style={[styles.itemDebt, isSelected? styles.itemDebtAction: null]}
             >
                 <View style={[styles.icon, {backgroundColor:`rgba(${iconColor(item.type)},0.2)`}]}>
@@ -58,8 +48,7 @@ export default function TypeDebt(props:any) {
                     />
                 </View>
                 <Text  style={styles.itemText}>
-                    {item.type==="loan_to"? "Loan to":
-                        item.type==="loan_from"?"Loan from":
+                    {
                         item.type==="repay_to"?"Repay to":
                         item.type==="repay_from"?"Repay from": null
                     }

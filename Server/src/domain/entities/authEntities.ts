@@ -8,25 +8,32 @@ export class User {
   ) {}
 }
 
-export class Account {
-  constructor(
-    public id: string,
-    public email: string,
-    public passwordHash: string,
-    public role: Role,
-    public userId: string,
-    public status: AccountStatus,
-    public verified: boolean,
-    public lastLogin: string,
-    public publicKey:string,
-    public encryptedPrivateKey:string,
-    public googleId?:string
-  ) {}
-}
-
-export class ServerResult{
+export class Login{
   constructor(
     public status: boolean,
-    public message: string,
+    public message:string,
+    public email: string,
+    public accessToken: string,
+    public refreshToken: string,
+    public salt: string,
+    public encryptedSecretKey_user: string,
   ){}
+}
+
+export class Account {
+  constructor(
+    public readonly id: string,
+    public readonly email: string,
+    public readonly passwordHash: string,
+    public readonly role: Role,
+    public readonly userId: string,
+    public readonly status: AccountStatus,
+    public readonly verified: boolean,
+    public readonly lastLogin: string,
+    public readonly salt: string,
+    public readonly encryptedSecretKey_user: string,
+    public readonly encryptedSecretKey_server: string,
+    public readonly googleId?: string | null,
+    public userName?: string
+  ) {}
 }

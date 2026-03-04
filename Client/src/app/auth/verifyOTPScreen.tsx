@@ -2,8 +2,11 @@ import { useRef, useState, createRef, useEffect } from "react";
 import styles from "../../assets/styles/authStyle";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { Colors, mainColor } from "@/src/constants/theme";
-import { useNavigation } from "@react-navigation/native";
+import {useNavigation,useRoute,type RouteProp,
+} from "@react-navigation/native";
 import { AuthNavigationProp } from "../../models/types/RootStackParamList";
+import type { OTPScreenParams } from "@/src/models/types/authType";
+import { verifyOtpService, sendOtpService } from "@/src/services/auth/otpService";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,21 +14,46 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OTPVerificationScreen() {
   const OTP_LENGTH = 6;
-  const [timer, setTimer] = useState(60);
   const theme = Colors.light;
   const navigation = useNavigation<AuthNavigationProp>();
 
+  const route = useRoute<RouteProp<OTPScreenParams, "OTPVerificationScreen">>();
+  const { email, type } = route.params;
+  console.log("OTPVerificationScreen nhận params:", email, type);
+
+  
+  const [timer, setTimer] = useState(60);
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [isLoading, setIsLoading] = useState(false);
+
   const inputRefs = useRef(
     Array.from({ length: OTP_LENGTH }, () => createRef<TextInput>()),
   );
 
+  // 1. Gửi OTP ngay khi màn hình mount
+  useEffect(() => {
+    sendOtpOnMount();
+  }, []);
+
+  const sendOtpOnMount = async () => {
+    try {
+
+      await sendOtpService(email);
+    } catch (error: any) {
+      Alert.alert(
+        "Lỗi",
+        error.message ?? "Không thể gửi OTP. Vui lòng thử lại."
+      );
+    }
+  };
+
+  // 2. Đếm ngược timer
   useEffect(() => {
     if (timer === 0) return;
 
@@ -44,6 +72,7 @@ export default function OTPVerificationScreen() {
     newOtp[index] = value;
     setOtp(newOtp);
 
+    // Tự động focus ô tiếp theo
     if (value && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1].current?.focus();
     }
@@ -57,28 +86,59 @@ export default function OTPVerificationScreen() {
   };
 
   /* ===== RESEND OTP ===== */
-  const handleResendCode = () => {
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setTimer(60);
+  const handleResendCode = async() => {
+    try {
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setTimer(60);
 
-    setTimeout(() => {
-      inputRefs.current[0].current?.focus();
-    }, 100);
+      await sendOtpService(email);
+
+      setTimeout(() => {
+        inputRefs.current[0].current?.focus();
+      }, 100);
+
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.message ?? "Không thể gửi lại OTP");
+    }
   };
 
   /* ===== VERIFY ===== */
-  const isOtpComplete = otp.every((d) => d !== "");
-  // const { email } = useLocalSearchParams<{ email: string }>();
+  const isOtpComplete = otp.every((d) => d !== ""); 
 
-  const handleVerify = () => {
-    if (!isOtpComplete) return;
+  const handleVerify =async () => {
+    if (!isOtpComplete || isLoading) return;
 
-    // lấy email từ view nhập email 
-    const targetEmail = 
-    // email || 
-    "test@example.com";
+    setIsLoading(true);
 
-    navigation.navigate("ResetPasswordScreen", { email: targetEmail })
+    try{
+      const otpCode = otp.join("");
+
+      const serverType = type === "register" ? "REGISTER" : "CHANGE_PASSWORD";
+
+      const success = await verifyOtpService(email, otpCode, serverType);
+
+      if (!success) {
+        Alert.alert("Thất bại", "OTP không hợp lệ");
+        return;
+      }
+
+      if (type === "register") {
+        // Đăng ký thành công → về Login
+        Alert.alert(
+          "Thành công",
+          "Tài khoản đã được xác thực. Vui lòng đăng nhập.",
+          [{ text: "OK", onPress: () => navigation.navigate("LoginScreen") }]
+        );
+      } else {
+        // Quên mật khẩu → sang đổi mật khẩu
+        navigation.navigate("ResetPasswordScreen", { email });
+      }
+
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.message ?? "Xác thực OTP thất bại");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

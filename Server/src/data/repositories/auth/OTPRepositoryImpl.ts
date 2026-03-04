@@ -1,5 +1,5 @@
-import type { IOTPRepository } from "../../domain/interfaces/auth/IOTPRepository.js";
-import client from "../../config/redis.js";
+import type { IOTPRepository } from "../../../domain/models/auth/IOTPRepository.js";
+import client from "../../../config/redis.js";
 export default class OTPRepository implements IOTPRepository {
   async generateOTP(): Promise<string> {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -30,7 +30,7 @@ export default class OTPRepository implements IOTPRepository {
       throw err;
     }
   }
-  
+
   async getOTP(email: string): Promise<string | null> {
     try {
       const data = await client.get(email);

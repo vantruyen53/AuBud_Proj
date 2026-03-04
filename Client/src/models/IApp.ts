@@ -1,5 +1,5 @@
-interface ITransaction {
-    id: string;
+interface ITransaction { //Đã bỏ trong home
+    id: string; 
     category: ICategory;
     amount: string;
     type: string;
@@ -58,7 +58,7 @@ export interface IDebtTransaction {
 
 export interface ISaving{
   id:string | '',
-  name?: string | '',
+  name: string | '',
   target: number,
   balance:number,
 }
@@ -70,9 +70,9 @@ export interface BarChartProps {
 
 export interface IGroupFund { 
   id: string, 
-  name: string,
+  fundName: string,
   balance: number, 
-  members: number,
+  groupName: string,
 }
 
 export interface IStatisticDate{

@@ -1,7 +1,9 @@
 import { AuthServiceImpl } from '../services/AuthServiceImpl.js';
 import {TokenService} from '../services/tokenService.js';
-import TokenRepositoryImpl from "../data/repositories/TokenRepository.js";
+import TokenRepositoryImpl from "../data/repositories/auth/TokenRepository.js";
 import {verifyToken} from '../utils/helpers/jwt.js';
+import { Role } from '../domain/enums/authEnums.js';
+import type { IUserRepository } from "../domain/models/auth/IUserRepository.js";
 
 interface DecodedToken {
   id: string;
@@ -14,26 +16,15 @@ export class AuthController {
   constructor(
     private authService: AuthServiceImpl,
     private tokenService: TokenService,
+    private userRepo: IUserRepository,
   ) {}
 
   register = async (req: any, res: any) => {
     try {
       const registerData = req.resDTO;
-      
-      // Bổ sung publicKey và encryptedPrivateKey từ body (nhận từ Client)
-      const { publicKey, encryptedPrivateKey } = req.body;
-
-      if (!publicKey || !encryptedPrivateKey) {
-        return res.status(400).json({ 
-          status: false, 
-          message: "Thiếu thông tin mã hóa (RSA Keys)" 
-        });
-      }
 
       const result = await this.authService.register({
-        ...registerData,
-        publicKey,
-        encryptedPrivateKey
+        ...registerData
       });
 
       return res.status(201).json({
@@ -59,68 +50,22 @@ export class AuthController {
       const result = await this.authService.login(loginData, deviceInfo);
 
       return res.status(200).json({
-        status: result.status,
-        message: result.message,
-        data: {
-          data: result.user,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken
-        }
+        ...result,
       });
     } catch (error: any) {
       console.error("Controller Login Error:", error.message);
       return res.status(401).json({ 
         status: false, 
-        message: error.message || "Đăng nhập thất bại" 
+        message: error.message || "Đăng nhập thất bại",
+        user: { id: '', email: '', role: Role.NULL },
+        accessToken: '',
+        refreshToken: '',
+        salt: '',
+        encryptedSecretKey_user: '',
       });
     }
   };
 
-  // 3.1 Verify email to change pw
-  verifyEmail = async (req:any, res:any)=>{
-    const { email } = req.body;
-
-    try{
-      const result = await this.authService.verifyEmailForPasswordReset(email);
-      if(result.status) 
-        return res.status(200).json({
-          status: true,
-          message: result.message,
-        });
-      else        
-        return res.status(400).json({
-          status: false,
-          message: result.message,
-        });
-    } catch (error: any) {
-        return res.status(500).json({ 
-          status: false, 
-          message: `Controller Verify Email Error: ${error.message}`
-        });
-    }
-  }
-  // 3.2 Change password 
-  changePassWord = async (req:any, res:any)=>{
-    const resetPasswordDTO=req.resetPasswordDTO;
-    try{
-      const result = await this.authService.changePassword(resetPasswordDTO.email, resetPasswordDTO.newPassword);
-
-      if(result.status)
-        return res.status(200).json({
-          status: true,
-          message: result.message,
-        });
-      else        return res.status(400).json({
-          status: false,
-          message: result.message,
-        });
-    } catch (error: any) {
-        return res.status(500).json({ 
-          status: false, 
-          message: `Controller Change Password Error: ${error.message}`
-        });
-    }
-  }
   // 4. Yêu cầu gửi OTP (Quên mật khẩu hoặc Đăng ký)
   sendOtp = async (req: any, res: any) => {
     try {
@@ -147,17 +92,20 @@ export class AuthController {
       if(otpData.type === 'REGISTER'){
         const updateAccVerify = await this.authService.verifyAcc(otpData.email)
 
-        if(!updateAccVerify.status)
+        if(updateAccVerify.status){
+          console.log(`Account verified for email: ${otpData.email} successfully.`);
           return res.status(200).json({ 
             status: true, 
             message: updateAccVerify.message
           });
+        }
         else 
           return res.status(401).json({ 
             status: false, 
             message: updateAccVerify.message
           });
       } else{
+        //chang password type, vefiry email khi change password đã có route khác thực hiện  
         return res.status(200).json({ 
             status: true, 
             message: "OTP is correct"
@@ -167,6 +115,54 @@ export class AuthController {
       return res.status(500).json({ status: false, message: error.message });
     }
   };
+
+  // 3.1 Verify email to change pw
+  verifyEmail = async (req:any, res:any)=>{
+    const { email } = req.body;
+
+    try{
+      const result = await this.authService.verifyEmailForPasswordReset(email);
+      if(result.status) 
+        return res.status(200).json({
+          status: true,
+          message: result.message,
+        });
+      else        
+        return res.status(400).json({
+          status: false,
+          message: result.message,
+        });
+    } catch (error: any) {
+        return res.status(500).json({ 
+          status: false, 
+          message: `Controller Verify Email Error: ${error.message}`
+        });
+    }
+  }
+
+    // 3.2 Change password 
+  changePassWord = async (req:any, res:any)=>{
+    const resetPasswordDTO=req.resetPasswordDTO;
+    try{
+      const result = await this.authService.changePassword(resetPasswordDTO.email, resetPasswordDTO.newPassword);
+
+      if(result.status)
+        return res.status(200).json({
+          status: true,
+          message: result.message,
+        });
+      else   
+        return res.status(400).json({
+          status: false,
+          message: result.message,
+        });
+    } catch (error: any) {
+        return res.status(500).json({ 
+          status: false, 
+          message: `Controller Change Password Error: ${error.message}`
+        });
+    }
+  }
 
   logOut = async(req: any, res: any) => {
     const { refreshToken } = req.body;
@@ -196,7 +192,7 @@ export class AuthController {
   }
 
   refreshToken= async(req: any, res: any) => {
-    const { refreshToken, userId } = req.body;
+    const { refreshToken } = req.body;
     const deviceInfo = req.headers['user-agent'] || "Unknown Device";
 
     const decoded = verifyToken(refreshToken, "refresh") as unknown as DecodedToken;
@@ -208,6 +204,11 @@ export class AuthController {
       if (!isValidInDb) {
         return res.status(403).json({ message: "Token has been revoked" });
       }
+      
+    const user = await this.userRepo.findById(decoded.id);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
 
     await this.tokenService.revokeSession(refreshToken);
 
@@ -217,7 +218,7 @@ export class AuthController {
         nhưng họ gửi kèm userId của User B trong body, và server của bạn tin vào cái body đó, 
         bạn sẽ vô tình cấp Access Token của User B cho hacker. 
         Đây là lỗ hổng IDOR (Insecure Direct Object Reference).*/
-        { id: decoded.id}, 
+        { id: decoded.id,userName: user.userName}, 
         deviceInfo
       );
 
@@ -226,7 +227,7 @@ export class AuthController {
 
   loginWithGG =  async (req: any, res: any) => {
     try {
-      const { idToken } = req.body;
+      const { idToken, salt, encryptedSecretKey_user, encryptedSecretKey_server } = req.body;
 
       if (!idToken) {
         return res.status(400).json({ message: "idToken là bắt buộc" });
@@ -235,13 +236,20 @@ export class AuthController {
       // Lấy deviceInfo từ header User-Agent (giống login thường)
       const deviceInfo = req.headers['user-agent'] || "Unknown Device";
 
-      const result = await this.authService.loginWithGoogle(idToken, deviceInfo);
-
+      const result = await this.authService.loginWithGoogle(idToken, deviceInfo, salt, encryptedSecretKey_user, encryptedSecretKey_server);
       return res.status(200).json(result);
 
     } catch (error: any) {
       console.error("[Google Auth Error]", error.message);
-      return res.status(401).json({ message: "Xác thực Google thất bại" });
+      return res.status(401).json({ 
+        status: false, 
+        message: error.message || "Đăng nhập bằng GG thất bại",
+        user: { id: '', email: '', role: Role.NULL },
+        accessToken: '',
+        refreshToken: '',
+        salt: '',
+        encryptedSecretKey_user: '',
+      });
     }
   }
 }

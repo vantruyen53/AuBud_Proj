@@ -1,76 +1,112 @@
+//Import library
 import {
   Text,
   View,
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
+  Alert 
 } from "react-native";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback  } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { styles } from "../../assets/styles/homeStyle";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import { Colors, mainColor, linearGradient } from "@/src/constants/theme";
 import { Eye, EyeOff } from "lucide-react-native";
+import { useNavigation, useFocusEffect  } from "@react-navigation/native";
+
+//Import custome file
+import { styles } from "../../assets/styles/homeStyle";
 import { useProvider } from "@/src/hooks/useProvider";
 import { formatCurrency } from "@/src/utils/format";
 import { SwipeListView } from "react-native-swipe-list-view";
 import Transaction from "../../components/transaction";
 import FloatAddBtn from "../../components/floatAddBtn";
-import { generateMockTransaction } from "../../utils/generateSectionList ";
-import { ITransaction } from "../../models/IApp";
 import { ModalForm } from "../../components/customModal";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation } from "@react-navigation/native";
 import { HomeStackNavProp } from "../../models/types/RootStackParamList";
 import BarChart from "@/src/components/barChartTransaction";
 import { totalSenIn } from "@/src/utils/helper";
+import { ITransactionItem } from "@/src/models/interface/Entities";
+import { TransactionApp } from "@/src/store/application/TransactionApp";
+import {createIconAcc} from '@/src/utils/helper';
 
 export default function HomeScreen() {
   const y = new Date().getFullYear();
-  const m = new Date().getMonth();
-  const [activeCategoryTab, setActiveCategoryTab] = useState<string>("sending");
-  const [editingTx, setEditingTx] = useState<ITransaction | null>(null);
-  const [transactions, setTransactions] = useState<
-    Record<string, ITransaction[]>
-  >(generateMockTransaction());
-  const { isShowData, toggleShowData } = useProvider();
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [formData, setFormData] = useState<any>({});
-  const [stateViewTransaction, setStateViewTransaction] = useState<
-    "detail" | "chart"
-  >("chart");
-  const [data, setData] = useState<{ sending: number; income: number }>({
-    sending: 0,
-    income: 0,
-  });
+  const m = new Date().getMonth() + 1;
+  const d = new Date().getDate();
+  const { isShowData, toggleShowData, id, userName, accessToken } =useProvider();
+  const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
 
-  useEffect(() => {
-    const newData = generateMockTransaction(activeCategoryTab);
-    setTransactions(newData);
-  }, [activeCategoryTab]);
+  // 1. State quản lý dữ liệu gốc
+  const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
+  const [summary, setSummary] = useState({totalSending: 0,totalIncome: 0,balance: 0,});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // UI State
+  const [activeCategoryTab, setActiveCategoryTab] = useState<string>("sending");
+  const [stateViewTransaction, setStateViewTransaction] = useState<"detail" | "chart">("chart");
+  const [isModalVisible, setModalVisible] = useState(false);
+
+  //Handle data
+  const [editingTx, setEditingTx] = useState<ITransactionItem | null>(null);
+  const [formData, setFormData] = useState<any>({});
+  // const [data, setData] = useState<{ sending: number; income: number }>({sending: 0,income: 0,});
 
   const navigation = useNavigation<HomeStackNavProp>();
+  const nameArray = userName.split(" ");
+  const displayName =nameArray.length > 1 ? nameArray[nameArray.length - 1] : userName;
+  const IconText = createIconAcc(userName);
 
+  const [trigger, setTrigger]=useState(0)
+
+  // 1. Lấy dữ liệu tổng quan cho summary card và mảng gốc để filter "transaction today"
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        setIsLoading(true);
+        const result = await tractionApp.getTransactionHistory(0,m, y, 'month');
+        if (result) {
+          setAllTransactions(result.rawTransactions);
+          setSummary({
+            totalSending: result.totalSending,
+            totalIncome: result.totalIncome,
+            balance: result.balance,
+          });
+        }
+        setIsLoading(false);
+      };
+      fetchData();
+    }, [m, y,trigger])
+  )
+
+  // 2. TÍNH TOÁN "HÔM NAY": Dùng useMemo để không tính lại thừa
+  const transactionsToday = useMemo(() => {
+    const monthStr = m < 10 ? `0${m}` : `${m}`;
+    const dayStr = d < 10 ? `0${d}` : `${d}`;
+    const dateStr = `${y}-${monthStr}-${dayStr}`;
+    return allTransactions.filter((t) => {
+      const transactionDate = t.date?.split('T')[0];
+      return transactionDate === dateStr;
+    });
+  }, [allTransactions]);
+
+  // 3. LỌC THEO TAB (Sending/Income)
   const flattenedData = useMemo(() => {
-    return Object.values(transactions).flat();
-  }, [transactions]);
+    return transactionsToday.filter((t) => t.type === activeCategoryTab);
+  }, [transactionsToday, activeCategoryTab]);
 
-  useEffect(() => {
-    const incomeFlat = Object.values(generateMockTransaction("income")).flat();
-    const sendingFlat = Object.values(
-      generateMockTransaction("sending"),
-    ).flat();
-    const fetchData = async () => {
-      const data = await totalSenIn(sendingFlat, incomeFlat);
-      setData(data);
-    };
-    fetchData();
-  }, [transactions]);
+  // 4. DỮ LIỆU BIỂU ĐỒ HÔM NAY
+  const chartData = useMemo(() => {
+    const sending = totalSenIn(transactionsToday, "sending");
+    const income = totalSenIn(transactionsToday, "income");
+    return { sending, income };
 
-  const handleEdit = (tx: ITransaction, rowMap: any) => {
+  }, [transactionsToday]);
+
+  // 5. Handle action
+  const handleEdit = (tx: ITransactionItem, rowMap: any) => {
     if (rowMap[tx.id]) {
       rowMap[tx.id].closeRow();
     }
@@ -78,8 +114,7 @@ export default function HomeScreen() {
     setFormData(tx);
     setModalVisible(true);
   };
-
-  const handleDelete = (id: string, dateStr: string) => {
+  const handleDelete = (payLoad: ITransactionItem) => {
     Alert.alert(
       "Xác nhận xóa",
       "Bạn có chắc chắn muốn xóa giao dịch này không?",
@@ -88,54 +123,21 @@ export default function HomeScreen() {
         {
           text: "Xóa",
           style: "destructive",
-          onPress: () => {
-            setTransactions((prev) => {
-              const newData = { ...prev };
-              newData[dateStr] = newData[dateStr].filter((tx) => tx.id !== id);
-              return newData;
-            });
+          onPress: async () => {
+            const result = await tractionApp.deleteTransaction(payLoad);
+            if(result)
+              setTrigger(pre=>pre+1)
           },
         },
       ],
     );
   };
-
   const handleSave = () => {};
 
   const renderHeader = () => (
     <>
       {/* Header Container */}
       <View style={styles.headerContainer}>
-        {/* Top Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topLeft}>
-            <TouchableOpacity
-              style={styles.notifacation}
-              onPress={()=>navigation.navigate('notifacation')}
-            >
-              <MaterialDesignIcons
-                name="bell"
-                color={Colors.light.primary}
-                size={24}
-              />
-              <Text style={styles.noteText}>
-                1
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.userName}>cung</Text>
-          </View>
-
-          <View style={styles.topRight}>
-            <TouchableOpacity
-              style={styles.historyButton}
-              onPress={() => navigation.navigate("history")}
-            >
-              <MaterialIcons name="history-edu" size={22} color="#fff" />
-              <Text style={styles.historyText}>History</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Account/Piggy List Horizontal */}
         <ScrollView
           horizontal
@@ -153,7 +155,7 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.accountName}>cung</Text>
+            <Text style={styles.accountName}>{displayName}</Text>
           </View>
 
           <TouchableOpacity
@@ -178,7 +180,7 @@ export default function HomeScreen() {
         <View style={styles.monthSelector}>
           <View style={styles.monthDisplay}>
             <Text style={styles.monthText}>
-              {m + 1}/{y}
+              {m}/{y}
             </Text>
           </View>
         </View>
@@ -191,7 +193,9 @@ export default function HomeScreen() {
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {isShowData ? formatCurrency(0, { showSign: false }) : "******"}
+              {isShowData
+                ? formatCurrency(summary.balance, { showSign: false })
+                : "******"}
             </Text>
             <View style={styles.statLabelRow}>
               <MaterialDesignIcons
@@ -211,7 +215,9 @@ export default function HomeScreen() {
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                {isShowData ? formatCurrency(0, { absolute: true }) : "******"}
+                {isShowData
+                  ? formatCurrency(summary.totalIncome, { absolute: true })
+                  : "******"}
               </Text>
               <View style={styles.statLabelRow}>
                 <MaterialDesignIcons
@@ -231,7 +237,9 @@ export default function HomeScreen() {
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                {isShowData ? formatCurrency(0, { absolute: true }) : "******"}
+                {isShowData
+                  ? formatCurrency(summary.totalSending, { absolute: true })
+                  : "******"}
               </Text>
               <View style={styles.statLabelRow}>
                 <MaterialDesignIcons
@@ -269,8 +277,8 @@ export default function HomeScreen() {
         <Text style={styles.recentTransactionsTitle}>Trasaction today</Text>
         <TouchableOpacity
           onPress={() =>
-            setStateViewTransaction(
-              stateViewTransaction === "detail" ? "chart" : "detail",
+            setStateViewTransaction((prev) =>
+              prev === "detail" ? "chart" : "detail",
             )
           }
         >
@@ -281,118 +289,155 @@ export default function HomeScreen() {
       </View>
 
       {/* Segment Control (Chi/Thu) */}
-      {stateViewTransaction === "detail" && (
-        <View style={styles.segmentControlContainer}>
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              activeCategoryTab === "sending" && styles.segmentButtonActive,
-            ]}
-            onPress={() => setActiveCategoryTab("sending")}
-          >
-            <Text
+      {stateViewTransaction === "detail" ? (
+        <>
+          <View style={styles.segmentControlContainer}>
+            <TouchableOpacity
               style={[
-                styles.segmentText,
-                activeCategoryTab === "sending" && styles.segmentTextActive,
+                styles.segmentButton,
+                activeCategoryTab === "sending" && styles.segmentButtonActive,
               ]}
+              onPress={() => setActiveCategoryTab("sending")}
             >
-              Sending
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.segmentText,
+                  activeCategoryTab === "sending" && styles.segmentTextActive,
+                ]}
+              >
+                Sending
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              activeCategoryTab === "income" && styles.segmentButtonActive,
-            ]}
-            onPress={() => setActiveCategoryTab("income")}
-          >
-            <Text
+            <TouchableOpacity
               style={[
-                styles.segmentText,
-                activeCategoryTab === "income" && styles.segmentTextActive,
+                styles.segmentButton,
+                activeCategoryTab === "income" && styles.segmentButtonActive,
               ]}
+              onPress={() => setActiveCategoryTab("income")}
             >
-              Income
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* summary chart  */}
-      {stateViewTransaction === "detail" ? null : (
-        <BarChart sending={data.sending} income={data.income} />
+              <Text
+                style={[
+                  styles.segmentText,
+                  activeCategoryTab === "income" && styles.segmentTextActive,
+                ]}
+              >
+                Income
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {flattenedData.length <= 0 && (
+            <Text style={styles.noTransactionsText}>No transactions today</Text>
+          )}
+        </>
+      ) : (
+        <BarChart sending={chartData.sending} income={chartData.income} />
       )}
     </>
   );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView edges={["top"]} style={styles.container}>
-        {/* Main Content Overlay */}
-        {stateViewTransaction === "detail" ? (
-          <SwipeListView
-            data={flattenedData}
-            keyExtractor={(item: ITransaction) => item.id}
-            ListHeaderComponent={renderHeader}
-            showsVerticalScrollIndicator={false}
-            rightOpenValue={-80}
-            disableRightSwipe={true}
-            swipeToOpenPercent={40}
-            renderItem={(data, rowMap) => (
-              <Transaction
-                title={data.item.title}
-                wallet={data.item.wallet}
-                amount={data.item.amount}
-                categoryName={data.item.category.name}
-                iconName={data.item.category.iconName}
-                iconColor={data.item.category.iconColor}
-                type={data.item.type}
-                showData={isShowData}
-                handleEdit={() => {
-                  handleEdit(data.item, rowMap);
-                }}
-              />
-            )}
-            renderHiddenItem={(data, rowMap) => (
+        {/* Top Bar */}
+        <View style={{  backgroundColor:"#12D0FF", }}>
+          <SafeAreaView edges={["top"]} style={styles.navBar}>
+            <View style={styles.headerProfile}>
+              <View style={styles.headerAvatar}>
+                <Text style={styles.headerAvatarText}>{IconText}</Text>
+              </View>
+              <View style={styles.headerWelcome}>
+                <Text style={styles.headerGreeting}>Good morning,</Text>
+                <Text style={styles.headerUserName}>{displayName}</Text>
+              </View>
+            </View>
+            <View style={styles.topRight}>
               <TouchableOpacity
-                onPress={() => handleDelete(data.item.id, data.item.date)}
-                style={styles.deleteAction}
+                style={styles.historyButton}
+                onPress={() => navigation.navigate("history")}
               >
-                <Animated.View style={styles.deleteActionContent}>
-                  <Text style={styles.deleteActionText}>Delete</Text>
-                </Animated.View>
+                <MaterialIcons name="history-edu" size={22} color="#fff" />
+                <Text style={styles.historyText}>History</Text>
               </TouchableOpacity>
-            )}
+              <TouchableOpacity
+                style={styles.notification}
+                onPress={() => navigation.navigate('notifacation')}
+              >
+                <MaterialDesignIcons
+                  name="bell"
+                  color="#FFF"
+                  size={22}
+                />
+                <View style={styles.noteText}></View>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </View>
+        <View  style={styles.container}>
+          {/* Main Content Overlay */}
+          {stateViewTransaction === "detail" ? (
+            <SwipeListView
+              style={{paddingBottom:80}}
+              data={flattenedData}
+              keyExtractor={(item: ITransactionItem) => item.id}
+              ListHeaderComponent={renderHeader}
+              showsVerticalScrollIndicator={false}
+              rightOpenValue={-80}
+              disableRightSwipe={true}
+              swipeToOpenPercent={40}
+              renderItem={(data, rowMap) => (
+                <Transaction
+                  title={data.item.title}
+                  wallet={data.item.wallet}
+                  amount={formatCurrency(data.item.type==="sending"?Number(`-${data.item.amount}`):data.item.amount)}
+                  categoryName={data.item.category.name}
+                  iconName={data.item.category.iconName}
+                  iconColor={data.item.category.iconColor}
+                  type={data.item.type}
+                  showData={isShowData}
+                  handleEdit={() => {
+                    handleEdit(data.item, rowMap);
+                  }}
+                />
+              )}
+              renderHiddenItem={(data, rowMap) => (
+                <TouchableOpacity
+                  onPress={() => handleDelete(data.item)}
+                  style={styles.deleteAction}
+                >
+                  <Animated.View style={styles.deleteActionContent}>
+                    <Text style={styles.deleteActionText}>Delete</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {renderHeader()}
+            </ScrollView>
+          )}
+
+          {/* Floating Action Button - Sky Blue */}
+          <FloatAddBtn
+            name="edit"
+            size="24"
+            navigation={() => navigation.navigate("addTransaction")}
           />
-        ) : (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {renderHeader()}
-          </ScrollView>
-        )}
 
-        {/* Floating Action Button - Sky Blue */}
-        <FloatAddBtn
-          name="edit"
-          size="24"
-          navigation={() => navigation.navigate("addTransaction")}
-        />
-
-        {/* Edit Transaction Modal */}
-        <ModalForm
-          isVisible={isModalVisible}
-          type="transaction"
-          onPressClose={() => setModalVisible(false)}
-          onPressDelete={() =>
-            handleDelete(editingTx?.id || "", editingTx?.date || "")
-          }
-          onPressSave={() => {
-            handleSave();
-          }}
-          formData={formData}
-          setFormData={setFormData}
-        />
-      </SafeAreaView>
+          {/* Edit Transaction Modal */}
+          <ModalForm
+            isVisible={isModalVisible}
+            type="transaction"
+            onPressClose={() => setModalVisible(false)}
+            onPressDelete={() =>
+              handleDelete(editingTx as ITransactionItem)
+            }
+            onPressSave={() => {
+              handleSave();
+            }}
+            formData={formData}
+            setFormData={setFormData}
+          />
+        </View>
     </GestureHandlerRootView>
   );
 }

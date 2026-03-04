@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Eye, EyeOff } from "lucide-react-native";
@@ -7,8 +7,8 @@ import styles from "../../assets/styles/authStyle";
 import { linearGradient, Colors, mainColor } from "@/src/constants/theme";
 import { useNavigation, StackActions } from "@react-navigation/native";
 import { AuthNavigationProp } from "../../models/types/RootStackParamList";
-import { signInWithGoogle } from "../../services/Googleauthservice";
-
+import { signInWithGoogle } from "../../services/auth/Googleauthservice";
+import { loginService } from "../../services/auth/loginService";
 import {
   Image,
   KeyboardAvoidingView,
@@ -21,8 +21,24 @@ import {
   View,
   Alert
 } from "react-native";
-const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+import { passwordRegex, validateEmail } from "@/src/utils/helper";
+import { useProvider } from "@/src/hooks/useProvider";
+import * as SecureStore from "expo-secure-store";
+
+function validateForm(
+  email: string,
+  password: string,
+): string | null {
+  if (!email.trim())           return "Vui lòng nhập email";
+  if (!validateEmail(email))   return "Email không hợp lệ";
+  if (!password)               return "Vui lòng nhập mật khẩu";
+  if (!passwordRegex(password.trim()))
+    return "Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt";
+  return null;
+}
+
 export default function LoginScreen() {
+  const { signIn } = useProvider()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,8 +48,47 @@ export default function LoginScreen() {
 
   const navigation = useNavigation<AuthNavigationProp>();
 
-  const handleLogin = () => {
-    navigation.dispatch(StackActions.replace("LayoutTabs"));
+  const handleLogin = async () => {
+    const validationForm = validateForm(email, password);
+     console.log("Data to server================")
+    if (validationForm) {
+      Alert.alert(validationForm);
+      return;
+    }
+
+    setLoading(true);
+
+    try{
+      const result = await loginService({ email, password });
+
+      if (!result.status) {
+        Alert.alert(result.message);
+        return;
+      } 
+
+      if (result.status) {
+        await signIn(result.accessToken, result.refreshToken);
+        navigation.dispatch(StackActions.replace("LayoutTabs"));
+      }
+    } catch (error: any) {
+      if (error.message?.includes("public key")) {
+          Alert.alert(
+            "Lỗi kết nối",
+            "Không thể kết nối đến server. Vui lòng thử lại."
+          );
+        } else if (error.message?.includes("Network")) {
+          console.error("Network error:", error);
+          Alert.alert(
+            "Lỗi mạng",
+            "Kiểm tra kết nối internet của bạn và thử lại."
+          );
+        } else {
+          Alert.alert("Lỗi", error.message ?? "Đã có lỗi xảy ra. Vui lòng thử lại.");
+        }
+    }finally {
+        // Luôn tắt loading dù thành công hay thất bại
+        setLoading(false);
+      }
   };
 
   const handleGoogleLogin = async () => {
@@ -41,27 +96,15 @@ export default function LoginScreen() {
       setLoading(true);
 
       // 1. Lấy idToken từ Google
-      const { idToken } = await signInWithGoogle();
+      console.log("Bắt đầu đăng nhập với Google...");
+      const data = await signInWithGoogle();
 
-      // 2. Gửi idToken lên server để verify và nhận JWT
-      const response = await fetch(`${API_URL}/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message ?? "Đăng nhập thất bại");
+      if(data.status) {
+        await signIn(data.accessToken, data.refreshToken);
+        navigation.dispatch(StackActions.replace("LayoutTabs"));
+      } else {
+        Alert.alert("Đăng nhập thất bại", data.message);
       }
-
-      // 3. Lưu JWT vào secure storage (bạn tự triển khai phần này
-      //    dùng react-native-keychain hoặc expo-secure-store)
-      // await saveToken(data.accessToken);
-
-      // 4. Điều hướng vào app
-      navigation.dispatch(StackActions.replace("LayoutTabs"));
 
     } catch (error: any) {
       Alert.alert("Lỗi", error.message ?? "Đã có lỗi xảy ra");
@@ -173,7 +216,7 @@ export default function LoginScreen() {
             <View style={styles.socialButtons}>
               <TouchableOpacity
                 style={styles.socialButton}
-                onPress={() => handleGoogleLogin}
+                onPress={() => handleGoogleLogin()}
               >
                 <Image
                   source={{ uri: "https://www.google.com/favicon.ico" }}

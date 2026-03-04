@@ -1,87 +1,25 @@
-import { ITransaction, ICategory, ITransactionSection } from "../models/IApp";
-import { mockIncome, mockSending } from "../store/seed/transaction";
+import { ITransactionItem, ICategory } from "../models/interface/Entities";
 import { formatCurrency } from "./format";
-
-const generateMockTransaction = (
-  type: string = "sending",
-): Record<string, ITransaction[]> => {
-  const data: Record<string, ITransaction[]> = {};
-  const addTx = (
-    id: string,
-    title: string,
-    wallet: string,
-    date: string,
-    amount: string,
-    icon: ICategory,
-    type: string,
-    note: string,
-    budget: string,
-  ) => {
-    if (!data[date]) data[date] = [];
-
-    data[date].push({
-      id: id,
-      category: icon,
-      amount: amount,
-      type: type,
-      wallet: wallet,
-      date: date,
-      note: note,
-      buget: budget,
-      title: title,
-    });
-  };
-  if (type === "sending")
-    for (let t of mockSending) {
-      const amount = formatCurrency(parseInt(t.amount));
-      addTx(
-        t.id,
-        t.title,
-        t.wallet,
-        t.date,
-        amount,
-        t.category,
-        t.type,
-        t.note,
-        t.buget,
-      );
-    }
-  else
-    for (let t of mockIncome) {
-      const amount = formatCurrency(parseInt(t.amount));
-      addTx(
-        t.id,
-        t.title,
-        t.wallet,
-        t.date,
-        amount,
-        t.category,
-        t.type,
-        t.note,
-        t.buget,
-      );
-    }
-  return data;
-};
-
-export { generateMockTransaction };
+interface ITransactionSection {
+  title: string;
+  data: ITransactionItem[];
+}
 
 export const getTransactionSections = (
-  type: string = "sending",
+  sourceData:ITransactionItem[]
 ): ITransactionSection[] => {
-  const sourceData = type === "sending" ? mockSending : mockIncome;
 
   // Nhóm theo ngày
   const groups = sourceData.reduce(
     (acc, item) => {
-      const date = item.date;
+      const date = item.date?.split('T')[0];
       if (!acc[date]) {
         acc[date] = [];
       }
-      acc[date].push(item as ITransaction);
+      acc[date].push(item as ITransactionItem);
       return acc;
     },
-    {} as Record<string, ITransaction[]>,
+    {} as Record<string, ITransactionItem[]>,
   );
 
   // Chuyển sang format SectionList và sắp xếp ngày mới nhất lên đầu

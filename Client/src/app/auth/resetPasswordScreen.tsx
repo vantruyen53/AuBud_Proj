@@ -8,22 +8,43 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View, Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import styles from "../../assets/styles/authStyle";
 import { Eye, EyeOff, ShieldCheck  } from 'lucide-react-native';
-import {linearGradient, Colors, mainColor } from "@/src/constants/theme";
-import { useNavigation, } from "@react-navigation/native";
+import {Colors, mainColor } from "@/src/constants/theme";
+import { useNavigation, useRoute,type RouteProp,} from "@react-navigation/native";
 import { AuthNavigationProp } from "../../models/types/RootStackParamList";
+import {passwordRegex} from '@/src/utils/helper';
+import { resetPasswordService } from "@/src/services/auth/resetPasswordService";
+
+type ResetPasswordParam = {
+    ResetPasswordScreen: {
+        email: string;
+    }
+}
+
+function validatePW(password: string, confirmPassword: string): string {
+  if (!passwordRegex(password))
+    return "Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt";
+  if (!password || !confirmPassword) return "Vui lòng nhập mật khẩu";
+
+  if (password !== confirmPassword) {
+    return "Passwords do not match";
+  }
+  return "";
+}
 
 export default function ResetPasswordScreen(){
+    const route = useRoute<RouteProp<ResetPasswordParam, "ResetPasswordScreen">>();
+    const { email } = route.params;
+
     const navigation = useNavigation<AuthNavigationProp>();
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const getPasswordStrength = (pass: string) => {
         if (pass.length === 0) return 0;
@@ -36,7 +57,30 @@ export default function ResetPasswordScreen(){
     const strengthColors = ["#E0E0E0", "#FF5252", "#FFC107", "#4CAF50"];
     const strengthLabels = ["", "Weak", "Medium", "Perfect"];
 
-    const handleResetPassword = () => {
+    const handleResetPassword = async () => {
+        const validationError = validatePW(password, confirmPassword);
+        if (validationError) {
+            Alert.alert("Error", validationError);
+            return;
+        }
+
+        const payload = {
+            email: email,
+            newPassword: password,
+        };
+
+        const result = await resetPasswordService(payload);
+        if (!result.success) {
+            Alert.alert("Error", result.message);
+            return;
+        }
+
+        Alert.alert(
+          "Thành công",
+          "Tài khoản đã được xác thực. Vui lòng đăng nhập.",
+          [{ text: "OK", onPress: () => navigation.navigate("LoginScreen") }]
+        );
+
         navigation.reset({
             index: 0,
             routes: [{ name: "LoginScreen" }],

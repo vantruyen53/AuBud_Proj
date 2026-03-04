@@ -7,52 +7,91 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
-import { useState, useMemo, useEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
-import { HomeStackNavProp } from "../../../models/types/RootStackParamList";
+import { useState, useMemo, useEffect, use } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
+
+//Config
+import { useNavigation } from "@react-navigation/native";
+import { HomeStackNavProp } from "../../../models/types/RootStackParamList";
 import styles from "@/src/assets/styles/addTransactionStyle";
-import {
-  mockCategoriesIncome,
-  mockCategoriesSending,
-} from "@/src/store/seed/category";
-import { mockDebts } from "@/src/store/seed/debt";
-import mockSaving from "@/src/store/seed/saving";
-import {
-  IWallet,
-  IDateState,
-  IDebtMaster,
-  ISaving,
-  ICategory,
-} from "@/src/models/IApp";
-import mockWallets from "@/src/store/seed/wallets";
+import { useProvider } from "@/src/hooks/useProvider";
+
+//Custom
 import {
   ModalWallet,
   ModalDebts,
   ModalSaving,
   ModalCategoryName,
 } from "@/src/components/customModal";
-import { dateFormat } from "@/src/utils/format";
+import { dateFormat, toDateTimeFormat } from "@/src/utils/format";
 import Calendar from "@/src/components/calendar";
 import TypeDebt from "@/src/components/typeDebts";
+import {
+  IWallet,
+  ISaving,
+  IDebt,
+  IDateState,ICategory,
+} from "@/src/models/interface/Entities";
+import { extractTransaction } from "@/src/utils/helper";
+import {
+  DebtTransactionDTO,
+  SavingTransactionDTO,
+  ConvertDTO,
+  CreateTransactionDTO,CategoryDTO
+} from "@/src/models/interface/DTO";
+
+//Application
+import { TransactionApp } from "@/src/store/application/TransactionApp";
+import { WalletApp } from "@/src/store/application/WalletApp";
+import { CategoryApp } from "@/src/store/application/CategoryApp";
 
 export default function AddTransactionScreen() {
   const navigation = useNavigation<HomeStackNavProp>();
-  const [typeAction, setTypeAction] = useState<
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth() + 1;
+  const day = new Date().getDate();
+
+  const { id, accessToken } = useProvider();
+  const walletApp = new WalletApp({ id: id, accessToken: accessToken });
+  const categoryApp = new CategoryApp({id, accessToken})
+  const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
+
+  //DATA
+  const [wallets, setWallets] = useState<IWallet[]>([]);
+  const [savings, setSavings] = useState<ISaving[]>([]);
+  const [debts, setDebts] = useState<IDebt[]>([]);
+
+  //HANLDE
+  const [actionType, setActionType] = useState<
     "Income" | "Sending" | "Debt" | "Saving" | "Convert"
   >("Sending");
-  const [amount, setAmount] = useState<string>("");
-
-  const [selectedCategory, setSelectedCategory] = useState<ICategory>({
+  const [selectedCategory, setSelectedCategory] = useState<CategoryDTO>({
     id: "",
     name: "",
     type: "",
     iconName: "",
     iconColor: "",
   });
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [detailCat, setDetailCat] = useState("");
+  const [note, setNote]=useState('');
+  const [specificTime, setSpecificTime] = useState<IDateState>({y: year.toString(),m: month.toString(),d: day.toString(),});
+  const [modalTarget, setModalTarget] = useState<"primary" | "convert_to">("primary",);
+
+  const [listSending, setListSending] = useState<ICategory[]>([]);
+  const [listIncome, setListIncome] = useState<ICategory[]>([]);
+
+  //SELETED DATA
+  const [debtSelected, setDebtSelected] = useState<{partnerName:string, remaining:number}>({partnerName:"", remaining:0});
+  const [walletSelected, setWalletSelected] = useState<{walletName:string, balance:number}>({walletName:"", balance:0});
+  const [savingSelected, setSavingSelected] = useState<{savingName:string, balance:number}>({savingName:"", balance:0});
+  const [walletTo, setWalletTo] = useState<{walletName:string, balance:number}>({walletName:"", balance:0});
+
+  //MODAL VIEW
   const [isOpenWallets, setIsOpenWallets] = useState(false);
   const [isOpenTypeDebts, setIsOpenTypeDebts] = useState(false);
   const [isOpenListDebts, setIsOpenListDebts] = useState(false);
@@ -60,547 +99,274 @@ export default function AddTransactionScreen() {
   const [isOpenSaving, setIsOpenSaving] = useState(false);
   const [isOpenCatNameInput, setIsOpenCatNameInput] = useState(false);
 
-  const [walletSelected, setWalletSelected] = useState<IWallet>({
-    id: "",
-    name: "",
-    balance: 0,
-  });
-  const [walletTo, setWalletTo] = useState<IWallet>({
-    id: "",
-    name: "",
-    balance: 0,
-  });
-  const [detailCat, setDetailCat] = useState("");
-  // Cờ để biết Modal đang chọn cho ví nào cho chuyển tiền giữa 2 ví
-  const [modalTarget, setModalTarget] = useState<"primary" | "convert_to">(
-    "primary",
+  const createdAt = toDateTimeFormat(
+    specificTime.y,
+    specificTime.m,
+    specificTime.d,
   );
 
-  const [debt, setDebt] = useState<IDebtMaster>({
-    id: "",
-    type: "",
-    partnerName: "",
-    totalAmount: 0,
-    remaining: 0,
-    status: "active",
-    createAt: "",
-  });
-  const [saving, setSaving] = useState<ISaving>({
-    id: "",
-    name: "",
-    target: 0,
-    balance: 0,
-  });
+  useEffect(() => {
+    const fetchData = async () => {
+      const [walletData, categoryData]= await Promise.all([
+        await walletApp.loadWalletScreenData(),
+        await categoryApp.getSuggestedCategory(),
+      ])
+      if (walletData && categoryData) {
+        setWallets(walletData.rawData.wallets);
+        setSavings(walletData.rawData.savings);
+        setDebts(walletData.rawData.debts);
+        setListSending(categoryData.catSending)
+        setListIncome(categoryData.catIncome)
+      }
+    };
+    fetchData();
+    setFormData({ ...formData, createdAt: createdAt });
+  }, []);
 
-  const year = new Date().getFullYear();
-  const month = new Date().getMonth() + 1;
-  const day = new Date().getDate();
+  const categories =actionType === "Sending"? listSending:listIncome;
 
-  const categories =
-    typeAction === "Sending"
-      ? mockCategoriesSending
-      : typeAction === "Income"
-        ? mockCategoriesIncome
-        : null;
-  const [specificTime, setSpecificTime] = useState<IDateState>({
-    y: year.toString(),
-    m: month.toString(),
-    d: day.toString(),
-  });
-  const handleDateSelect = (year: number, m: number, d: number) =>
+  const handleDateSelect = (year: number, m: number, d: number) => {
     setSpecificTime({ y: year.toString(), m: m.toString(), d: d.toString() });
-
+  };
   const convertFormat = (amount: string) => {
     const cleanNumber = amount.replace(/\D/g, "");
     return cleanNumber.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  const renderSenInForm = () => (
-    <>
-      {/* Amount  */}
-      <View style={styles.form}>
-        <Text style={styles.amountText}>Amount</Text>
-        <TextInput
-          placeholder="Example 300.000"
-          style={styles.amountInput}
-          keyboardType="numeric"
-          onChangeText={(val) => setAmount(val)}
-          value={convertFormat(amount)}
-          placeholderTextColor="#c9c9c9"
-        />
-      </View>
-
-      {/* Category   */}
-      <View style={styles.form}>
-        <View style={styles.detailCat}>
-          <Text
-            style={detailCat ? styles.detailCatText : styles.placeHolderWallet}
-          >
-            {detailCat ? detailCat : "Detail transaction name"}
-          </Text>
-          {detailCat && (
-            <TouchableOpacity
-              style={styles.detailCatClear}
-              onPress={() => setDetailCat("")}
-            >
-              <MaterialIcons name="close" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Text style={{ fontWeight: "600", fontSize: 18, color: "#12D0FF" }}>
-            Recomment
-          </Text>
-          <MaterialDesignIcons name="creation" size={20} color="#12D0FF" />
-        </View>
-        <View style={styles.gridContainer}>
-          {categories?.map((cat) => (
-            <View key={cat.id} style={{ width: "25%" }}>
-              <TouchableOpacity
-                key={cat.id}
-                style={styles.catItem}
-                onPress={() => {
-                  setSelectedCategory({
-                    id: cat.id,
-                    name: cat.name,
-                    type: cat.type,
-                    iconName: cat.iconName,
-                    iconColor: cat.iconColor,
-                  });
-                  setIsOpenCatNameInput(true);
-                }}
-              >
-                <View
-                  style={[
-                    styles.catIconBg,
-                    { backgroundColor: `rgba(${cat.iconColor},0.1)` },
-                    selectedCategory.id === cat.id && styles.catIconBgSelected,
-                  ]}
-                >
-                  <MaterialIcons
-                    name={cat.iconName as any}
-                    size={28}
-                    color={`rgb(${cat.iconColor})`}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.catName,
-                    selectedCategory.id === cat.id && styles.catNameSelected,
-                  ]}
-                >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-        <TouchableOpacity
-          style={styles.moreBtn}
-          onPress={() =>
-            navigation.navigate("allCategory", {
-              typePar: typeAction,
-              setIsOpenCatNameInput: (status: boolean) =>
-                setIsOpenCatNameInput(status),
-              setSelectedCategory: (categorie: ICategory) =>
-                setSelectedCategory(categorie),
-            })
-          }
-        >
-          <Text style={styles.moreText}>More</Text>
-          <MaterialDesignIcons
-            name="chevron-double-right"
-            size={15}
-            style={{ color: "#006c87" }}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Infor  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenWallets(true)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={25}
-              color="#6B7280"
-            />
-          </View>
-          <Text
-            style={
-              walletSelected.name !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {walletSelected.name !== ""
-              ? walletSelected.name
-              : "Select a wallet"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setIsOpenCalendar(!isOpenCalendar)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons name="calendar-today" size={25} color="#6B7280" />
-          </View>
-          <Text style={styles.selecteTimeText}>
-            {dateFormat(
-              parseInt(specificTime.d),
-              parseInt(specificTime.m),
-              parseInt(specificTime.y),
-            )}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.inforInput}>
-          <View style={styles.icon}>
-            <MaterialIcons name="notes" size={25} color="#6B7280" />
-          </View>
-          <TextInput
-            placeholder="Note for your transaction"
-            style={{ fontWeight: "500", fontSize: 16 }}
-            placeholderTextColor="#ddd"
-          />
-        </View>
-        <View></View>
-      </View>
-    </>
-  );
-
-  const selectTypeOfDebt = (type: any) => {
-    setDebt({ id: "", type: type.type, totalAmount: 0, remaining: 0 });
-    setIsOpenTypeDebts(false);
+  const clearForm = () => {
+    setFormData({});
+    setDetailCat("");
+    setSpecificTime({y: year.toString(),m: month.toString(),d: day.toString(),});
+    setNote('');
+    setModalTarget("primary");
+    setWalletTo({walletName:"", balance:0});
+    setSavingSelected({savingName:"", balance:0});
+    setWalletSelected({walletName:"", balance:0});
+    setDebtSelected({partnerName:"", remaining:0});
   };
 
+  const handleSave = async () => {
+    formData["createdAt"] = createdAt;
+    const e = extractTransaction(actionType, formData, id);
+    if (e)
+      try {
+        if (actionType === "Sending" || actionType === "Income") {
+          const payLoad = e as CreateTransactionDTO;
+          const result = await tractionApp.addTransaction(payLoad, walletSelected.balance);
+          if (result) clearForm();
+        } 
+        else if (actionType === "Debt" || actionType === "Saving") {
+          const payLoad = e as DebtTransactionDTO | SavingTransactionDTO;
+          const remaingOrBalance = actionType === "Debt"?debtSelected.remaining:savingSelected.balance;
+          const result = await walletApp.addWalletTransaction(
+            payLoad,walletSelected.balance,remaingOrBalance
+          );
+          if (result) clearForm();
+        } 
+        else {
+          const payLoad = e as ConvertDTO;
+          const result = await walletApp.convertBalance(payLoad, walletSelected.balance, walletTo.balance);
+          if (result) clearForm();
+        }
+      } catch (err) {
+        Alert.alert("Error", `Something went wrong ${err}`);
+      }
+    else Alert.alert("Error", "All field required");
+  };
+
+  const renderSenInForm = () => (
+    <View style={styles.form}>
+      <View style={styles.detailCat}>
+        <Text
+          style={detailCat ? styles.detailCatText : styles.placeHolderWallet}
+        >
+          {detailCat ? detailCat : "Detail transaction name"}
+        </Text>
+        {detailCat && (
+          <TouchableOpacity
+            style={styles.detailCatClear}
+            onPress={() => setDetailCat("")}
+          >
+            <MaterialIcons name="close" />
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <Text style={{ fontWeight: "600", fontSize: 18, color: "#12D0FF" }}>
+          Recomment
+        </Text>
+        <MaterialDesignIcons name="creation" size={20} color="#12D0FF" />
+      </View>
+      <View style={styles.gridContainer}>
+        {categories?.map((cat) => (
+          <View key={cat.id} style={{ width: "25%" }}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.catItem}
+              onPress={() => {
+                setSelectedCategory({
+                  id: cat.id,
+                  name: cat.name,
+                  type: cat.type,
+                  iconName: cat.iconName,
+                  iconColor: cat.iconColor,
+                });
+                setFormData({...formData, categoryId:cat.id})
+                setIsOpenCatNameInput(true);
+              }}
+            >
+              <View
+                style={[
+                  styles.catIconBg,
+                  { backgroundColor: `rgba(${cat.iconColor},0.1)` },
+                  selectedCategory.id === cat.id && styles.catIconBgSelected,
+                ]}
+              >
+                <MaterialIcons
+                  name={cat.iconName as any}
+                  size={28}
+                  color={`rgb(${cat.iconColor})`}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.catName,
+                  selectedCategory.id === cat.id && styles.catNameSelected,
+                ]}
+              >
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+      <TouchableOpacity
+        style={styles.moreBtn}
+        onPress={() =>
+          navigation.navigate("allCategory", {
+            typePar: actionType,
+            setIsOpenCatNameInput: (status: boolean) =>
+              setIsOpenCatNameInput(status),
+            setSelectedCategory: (categorie: CategoryDTO) =>
+              setSelectedCategory(categorie),
+          })
+        }
+      >
+        <Text style={styles.moreText}>More</Text>
+        <MaterialDesignIcons
+          name="chevron-double-right"
+          size={15}
+          style={{ color: "#006c87" }}
+        />
+      </TouchableOpacity>
+    </View>
+  );
   const renderDebtForm = () => (
-    <>
-      {/* Amount  */}
-      <View style={styles.form}>
-        <Text style={styles.amountText}>Amount</Text>
-        <TextInput
-          placeholder="Example 300.000"
-          style={styles.amountInput}
-          keyboardType="numeric"
-          onChangeText={(val) => {
-            const cleanNumber = val.replace(/\D/g, "");
-            setAmount(cleanNumber);
-          }}
-          value={convertFormat(amount)}
-          placeholderTextColor="#c9c9c9"
-        />
-      </View>
-
-      {/* type and partner  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenTypeDebts(true)}
-          style={styles.inforInput}
+    <View style={styles.form}>
+      <TouchableOpacity
+        onPress={() => setIsOpenTypeDebts(true)}
+        style={styles.inforInput}
+      >
+        <View
+          style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
         >
-          <View
-            style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
-          >
-            <MaterialDesignIcons name="hand-coin" size={24} color="#059669" />
-          </View>
-          <Text
-            style={
-              debt.type !== "" ? styles.walletName : styles.placeHolderWallet
-            }
-          >
-            {debt.type === "loan_to"
-              ? "Loan to"
-              : debt.type === "loan_from"
-                ? "Loan from"
-                : debt.type === "repay_to"
-                  ? "Repay to"
-                  : debt.type === "repay_from"
-                    ? "Repay from"
-                    : "Type of debt"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setIsOpenListDebts(true)}
-          style={styles.inforInput}
-        >
-          <View
-            style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
-          >
-            <MaterialDesignIcons
-              name="account-cash"
-              size={24}
-              color="#059669"
-            />
-          </View>
-          <Text
-            style={
-              debt.partnerName !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {debt.partnerName !== "" ? debt.partnerName : "Partner"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Infor  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenWallets(true)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={25}
-              color="#6B7280"
-            />
-          </View>
-          <Text
-            style={
-              walletSelected.name !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {walletSelected.name !== ""
-              ? walletSelected.name
-              : "Select a wallet"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setIsOpenCalendar(!isOpenCalendar)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons name="calendar-today" size={25} color="#6B7280" />
-          </View>
-          <Text style={styles.selecteTimeText}>
-            {dateFormat(
-              parseInt(specificTime.d),
-              parseInt(specificTime.m),
-              parseInt(specificTime.y),
-            )}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.inforInput}>
-          <View style={styles.icon}>
-            <MaterialIcons name="notes" size={25} color="#6B7280" />
-          </View>
-          <TextInput
-            placeholder="Note for your transaction"
-            style={{ fontWeight: "500", fontSize: 16 }}
-            placeholderTextColor="#ddd"
-          />
+          <MaterialDesignIcons name="hand-coin" size={24} color="#059669" />
         </View>
-      </View>
-    </>
-  );
+        <Text
+          style={
+            formData?.debtType ? styles.walletName : styles.placeHolderWallet
+          }
+        >
+          {formData?.debtType === "repay_to"
+            ? "Repay to"
+            : formData?.debtType === "repay_from"
+              ? "Repay from"
+              : "Type of debt"}
+        </Text>
+      </TouchableOpacity>
 
+      <TouchableOpacity
+        onPress={() => setIsOpenListDebts(true)}
+        style={styles.inforInput}
+      >
+        <View
+          style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
+        >
+          <MaterialDesignIcons name="account-cash" size={24} color="#059669" />
+        </View>
+        <Text
+          style={debtSelected.partnerName ? styles.walletName : styles.placeHolderWallet}
+        >
+          {debtSelected.partnerName ? debtSelected.partnerName : "Partner"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
   const renderSavingg = () => (
-    <>
-      {/* Amount  */}
-      <View style={styles.form}>
-        <Text style={styles.amountText}>Amount</Text>
-        <TextInput
-          placeholder="Example 300.000"
-          style={styles.amountInput}
-          keyboardType="numeric"
-          onChangeText={(val) => {
-            const cleanNumber = val.replace(/\D/g, "");
-            setAmount(cleanNumber);
-          }}
-          value={convertFormat(amount)}
-          placeholderTextColor="#c9c9c9"
-        />
-      </View>
-
-      {/* saving  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenSaving(true)}
-          style={styles.inforInput}
+    <View style={styles.form}>
+      <TouchableOpacity
+        onPress={() => setIsOpenSaving(true)}
+        style={styles.inforInput}
+      >
+        <View
+          style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
         >
-          <View
-            style={[styles.icon, { backgroundColor: "#05966920", padding: 7 }]}
-          >
-            <MaterialDesignIcons name="hand-coin" size={24} color="#059669" />
-          </View>
-          <Text
-            style={
-              saving.name !== "" ? styles.walletName : styles.placeHolderWallet
-            }
-          >
-            {saving.name !== "" ? saving.name : "Select a saving"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Infor  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenWallets(true)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={25}
-              color="#6B7280"
-            />
-          </View>
-          <Text
-            style={
-              walletSelected.name !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {walletSelected.name !== ""
-              ? walletSelected.name
-              : "Select a wallet"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setIsOpenCalendar(!isOpenCalendar)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons name="calendar-today" size={25} color="#6B7280" />
-          </View>
-          <Text style={styles.selecteTimeText}>
-            {dateFormat(
-              parseInt(specificTime.d),
-              parseInt(specificTime.m),
-              parseInt(specificTime.y),
-            )}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.inforInput}>
-          <View style={styles.icon}>
-            <MaterialIcons name="notes" size={25} color="#6B7280" />
-          </View>
-          <TextInput
-            placeholder="Note for your transaction"
-            style={{ fontWeight: "500", fontSize: 16 }}
-            placeholderTextColor="#ddd"
-          />
+          <MaterialDesignIcons name="hand-coin" size={24} color="#059669" />
         </View>
-      </View>
-    </>
+        <Text
+          style={savingSelected.savingName ? styles.walletName : styles.placeHolderWallet}
+        >
+          {savingSelected.savingName ? savingSelected.savingName : "Select a saving"}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
-
   const renderConvert = () => (
-    <>
-      {/* Amount  */}
-      <View style={styles.form}>
-        <Text style={styles.amountText}>Amount</Text>
-        <TextInput
-          placeholder="Example 300.000"
-          style={styles.amountInput}
-          keyboardType="numeric"
-          onChangeText={(val) => {
-            const cleanNumber = val.replace(/\D/g, "");
-            setAmount(cleanNumber);
-          }}
-          value={convertFormat(amount)}
-          placeholderTextColor="#c9c9c9"
-        />
-      </View>
-
-      {/* from - to  */}
-      <View style={styles.form}>
-        {/* from wallet  */}
-        <TouchableOpacity
-          onPress={() => {
-            (setIsOpenWallets(true), setModalTarget("primary"));
-          }}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={25}
-              color="#6B7280"
-            />
-          </View>
-          <Text
-            style={
-              walletSelected.name !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {walletSelected.name !== "" ? walletSelected.name : "From"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* to wallet  */}
-        <TouchableOpacity
-          onPress={() => {
-            (setModalTarget("convert_to"), setIsOpenWallets(true));
-          }}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={25}
-              color="#6B7280"
-            />
-          </View>
-          <Text
-            style={
-              walletSelected.name !== ""
-                ? styles.walletName
-                : styles.placeHolderWallet
-            }
-          >
-            {walletTo.name || "To Wallet"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Infor  */}
-      <View style={styles.form}>
-        <TouchableOpacity
-          onPress={() => setIsOpenCalendar(!isOpenCalendar)}
-          style={styles.inforInput}
-        >
-          <View style={styles.icon}>
-            <MaterialIcons name="calendar-today" size={25} color="#6B7280" />
-          </View>
-          <Text style={styles.selecteTimeText}>
-            {dateFormat(
-              parseInt(specificTime.d),
-              parseInt(specificTime.m),
-              parseInt(specificTime.y),
-            )}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.inforInput}>
-          <View style={styles.icon}>
-            <MaterialIcons name="notes" size={25} color="#6B7280" />
-          </View>
-          <TextInput
-            placeholder="Note for your transaction"
-            style={{ fontWeight: "500", fontSize: 16 }}
-            placeholderTextColor="#ddd"
+    <View style={styles.form}>
+      {/* from wallet  */}
+      <TouchableOpacity
+        onPress={() => {
+          (setIsOpenWallets(true), setModalTarget("primary"));
+        }}
+        style={styles.inforInput}
+      >
+        <View style={styles.icon}>
+          <MaterialIcons
+            name="account-balance-wallet"
+            size={25}
+            color="#6B7280"
           />
         </View>
-      </View>
-    </>
+        <Text
+          style={
+            walletSelected.walletName ? styles.walletName : styles.placeHolderWallet
+          }
+        >
+          {
+            walletSelected.walletName ? walletSelected.walletName : "From"
+          }
+        </Text>
+      </TouchableOpacity>
+
+      {/* to wallet  */}
+      <TouchableOpacity
+        onPress={() => {
+          (setModalTarget("convert_to"), setIsOpenWallets(true));
+        }}
+        style={styles.inforInput}
+      >
+        <View style={styles.icon}>
+          <MaterialIcons
+            name="account-balance-wallet"
+            size={25}
+            color="#6B7280"
+          />
+        </View>
+        <Text style={walletTo.walletName ? styles.walletName : styles.placeHolderWallet}>
+          {walletTo.walletName ? walletTo.walletName : "To Wallet"}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -621,20 +387,20 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               style={[
                 styles.typeItem,
-                typeAction === "Sending" ? styles.typeItemAction : null,
+                actionType === "Sending" ? styles.typeItemAction : null,
               ]}
-              onPress={() => setTypeAction("Sending")}
+              onPress={() => {setActionType("Sending"),clearForm()}}
             >
               <MaterialDesignIcons
                 name="cash-minus"
                 size={24}
                 style={
-                  typeAction === "Sending"
+                  actionType === "Sending"
                     ? styles.typeItemIconAction
                     : styles.typeItemIcon
                 }
               />
-              {typeAction === "Sending" && (
+              {actionType === "Sending" && (
                 <Text style={styles.typeTex}>Sending</Text>
               )}
             </TouchableOpacity>
@@ -642,20 +408,24 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               style={[
                 styles.typeItem,
-                typeAction === "Income" ? styles.typeItemAction : null,
+                actionType === "Income" ? styles.typeItemAction : null,
               ]}
-              onPress={() => setTypeAction("Income")}
+              onPress={() => {
+                setActionType("Income"),
+                setFormData({ ...formData, actionType: actionType })
+                clearForm();
+              }}
             >
               <MaterialDesignIcons
                 name="cash-plus"
                 size={20}
                 style={
-                  typeAction === "Income"
+                  actionType === "Income"
                     ? styles.typeItemIconAction
                     : styles.typeItemIcon
                 }
               />
-              {typeAction === "Income" && (
+              {actionType === "Income" && (
                 <Text style={styles.typeTex}>Income</Text>
               )}
             </TouchableOpacity>
@@ -663,20 +433,20 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               style={[
                 styles.typeItem,
-                typeAction === "Debt" ? styles.typeItemAction : null,
+                actionType === "Debt" ? styles.typeItemAction : null,
               ]}
-              onPress={() => setTypeAction("Debt")}
+              onPress={() => {setActionType("Debt"),clearForm()}}
             >
               <MaterialDesignIcons
                 name="account-cash"
                 size={20}
                 style={
-                  typeAction === "Debt"
+                  actionType === "Debt"
                     ? styles.typeItemIconAction
                     : styles.typeItemIcon
                 }
               />
-              {typeAction === "Debt" && (
+              {actionType === "Debt" && (
                 <Text style={styles.typeTex}>Debt</Text>
               )}
             </TouchableOpacity>
@@ -684,40 +454,41 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               style={[
                 styles.typeItem,
-                typeAction === "Saving" ? styles.typeItemAction : null,
+                actionType === "Saving" ? styles.typeItemAction : null,
               ]}
-              onPress={() => setTypeAction("Saving")}
+              onPress={() => {setActionType("Saving"),clearForm()}}
             >
               <MaterialIcons
                 name="savings"
                 size={20}
                 style={
-                  typeAction === "Saving"
+                  actionType === "Saving"
                     ? styles.typeItemIconAction
                     : styles.typeItemIcon
                 }
               />
-              {typeAction === "Saving" && (
+              {actionType === "Saving" && (
                 <Text style={styles.typeTex}>Saving</Text>
               )}
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.typeItem,
-                typeAction === "Convert" ? styles.typeItemAction : null,
+                actionType === "Convert" ? styles.typeItemAction : null,
               ]}
-              onPress={() => setTypeAction("Convert")}
+              onPress={() => {setActionType("Convert"),clearForm()}}
             >
               <MaterialIcons
                 name="autorenew"
                 size={20}
                 style={
-                  typeAction === "Convert"
+                  actionType === "Convert"
                     ? styles.typeItemIconAction
                     : styles.typeItemIcon
                 }
               />
-              {typeAction === "Convert" && (
+              {actionType === "Convert" && (
                 <Text style={styles.typeTex}>Convert</Text>
               )}
             </TouchableOpacity>
@@ -725,17 +496,86 @@ export default function AddTransactionScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
-          {(typeAction === "Sending" || typeAction === "Income") &&
+          {/* Amount  */}
+          <View style={styles.form}>
+            <Text style={styles.amountText}>Amount</Text>
+            <TextInput
+              placeholder="Example 300.000"
+              style={styles.amountInput}
+              keyboardType="numeric"
+              onChangeText={(val) => setFormData({ ...formData, amount: val })}
+              value={convertFormat(formData?.amount ?? "")}
+              placeholderTextColor="#c9c9c9"
+            />
+          </View>
+
+          {(actionType === "Sending" || actionType === "Income") &&
             renderSenInForm()}
+          {actionType === "Debt" && renderDebtForm()}
+          {actionType === "Saving" && renderSavingg()}
+          {actionType === "Convert" && renderConvert()}
+          {/* Infor  */}
+          <View style={styles.form}>
+            {actionType !== "Convert" && (
+              <TouchableOpacity
+                onPress={() => setIsOpenWallets(true)}
+                style={styles.inforInput}
+              >
+                <View style={styles.icon}>
+                  <MaterialIcons
+                    name="account-balance-wallet"
+                    size={25}
+                    color="#6B7280"
+                  />
+                </View>
+                <Text
+                  style={
+                    walletSelected.walletName
+                      ? styles.walletName
+                      : styles.placeHolderWallet
+                  }
+                >
+                  {walletSelected.walletName ? walletSelected.walletName : "Select a wallet"}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-          {typeAction === "Debt" && renderDebtForm()}
+            <TouchableOpacity
+              onPress={() => setIsOpenCalendar(!isOpenCalendar)}
+              style={styles.inforInput}
+            >
+              <View style={styles.icon}>
+                <MaterialIcons
+                  name="calendar-today"
+                  size={25}
+                  color="#6B7280"
+                />
+              </View>
+              <Text style={styles.selecteTimeText}>
+                {dateFormat(
+                  parseInt(specificTime.d),
+                  parseInt(specificTime.m),
+                  parseInt(specificTime.y),
+                )}
+              </Text>
+            </TouchableOpacity>
 
-          {typeAction === "Saving" && renderSavingg()}
-
-          {typeAction === "Convert" && renderConvert()}
-
+            <View style={styles.inforInput}>
+              <View style={styles.icon}>
+                <MaterialIcons name="notes" size={25} color="#6B7280" />
+              </View>
+              <TextInput
+                placeholder="Note for your transaction"
+                style={{ fontWeight: "500", fontSize: 16 }}
+                placeholderTextColor="#ddd"
+                value={note}
+                onChangeText={(val) =>{setNote(val),setFormData({ ...formData, note: val })}}
+              />
+            </View>
+            <View></View>
+          </View>
           {/* Save btn  */}
-          <TouchableOpacity style={styles.saveBtn}>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
             <Text style={styles.saveText}>Save</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -745,24 +585,26 @@ export default function AddTransactionScreen() {
             onPressClose={() => {
               setIsOpenWallets((pre) => !pre);
             }}
-            data={mockWallets}
+            data={wallets}
             walletSelected={
-              modalTarget === "primary" ? walletSelected.id : walletTo.id
+              modalTarget === "primary"
+                ? formData.walletId
+                : formData.toWalletId
             }
-            onSelected={(id: string, name: string, balance: number) => {
-              const data = { id, name, balance };
-
+            onSelected={(id: string, name: string,balance: number) => {
               if (modalTarget === "primary") {
-                setWalletSelected(data);
+                setWalletSelected({walletName:name, balance});
+                setFormData({ ...formData, walletId: id });
               } else {
                 // Kiểm tra tránh chọn trùng ví nguồn
-                if (id === walletSelected.id) {
+                if (id === formData.walletId) {
                   alert(
                     "The receiving wallet address must not be the same as the sending wallet address!",
                   );
                   return;
                 }
-                setWalletTo(data);
+                setWalletTo({walletName:name, balance});
+                setFormData({ ...formData, toWalletId: id });
               }
             }}
           />
@@ -778,50 +620,40 @@ export default function AddTransactionScreen() {
         )}
         {isOpenTypeDebts && (
           <TypeDebt
-            isSelected={debt.type}
-            onSelecte={(type: string) => selectTypeOfDebt(type)}
+            isSelected={formData?.debtType}
+            onSelecte={(type: string) => {
+              (setFormData({ ...formData, debtType: type }),
+                setIsOpenTypeDebts(false));
+            }}
           />
         )}
         {isOpenListDebts && (
           <ModalDebts
-            data={mockDebts}
+            data={debts}
             onPressClose={() => setIsOpenListDebts(!isOpenListDebts)}
-            onSelect={({ partnerName: partnerName }: IDebtMaster) =>
-              setDebt({
-                id: "",
-                type: debt.type,
-                partnerName: partnerName,
-                totalAmount: 0,
-                remaining: 0,
-              })
-            }
-            debt={debt}
-            onChangeText={({ partnerName: val }: IDebtMaster) =>
-              setDebt({
-                id: "",
-                type: debt.type,
-                partnerName: val,
-                totalAmount: 0,
-                remaining: 0,
-              })
-            }
+            onSelect={(id: string, partnerName: string, remaining: number) => {
+              (setDebtSelected({partnerName,remaining}),
+                setFormData({ ...formData, debtId: id }));
+            }}
+            debt={formData.debtId}
           />
         )}
         {isOpenSaving && (
           <ModalSaving
-            data={mockSaving}
-            saving={saving}
+            data={savings}
+            selected={formData.savingId}
             onPressClose={() => setIsOpenSaving(!isOpenSaving)}
-            onSelect={({ name: name }: ISaving) =>
-              setSaving({ id: "", name: name, target: 0, balance: 0 })
-            }
+            onSelect={(id: string, name: string,balance: number) => {
+              (setSavingSelected({savingName:name, balance}),
+                setFormData({ ...formData, savingId: id }));
+            }}
           />
         )}
         {isOpenCatNameInput && (
           <ModalCategoryName
             cat={selectedCategory}
             onPressClose={() => setIsOpenCatNameInput(false)}
-            setDetailCat={setDetailCat}
+            setDetailCat={(title:string)=>{setDetailCat(title), setFormData({...formData, title:title})}}
           />
         )}
       </KeyboardAvoidingView>

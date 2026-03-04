@@ -1,35 +1,96 @@
 import express from "express";
-import { AuthController } from '../controllers/authController.js'
-import { AuthServiceImpl } from '../services/AuthServiceImpl.js';
-import UserRepositoryImpl from '../data/repositories/UserRepositoryImpl.js';
-import OTPRepository from '../data/repositories/OTPRepositoryImpl.js';
-import TokenRepositoryImpl from '../data/repositories/TokenRepository.js';
-import { TokenService } from '../services/tokenService.js';
-import { registerValidation, loginValidation, verifyOTP, authenticateJWT, emailValidation, passwordValidation } from '../middlewares/authMiddleware.js';
-import pool from '../config/dbConfig.js';
+import pool from "../config/dbConfig.js";
 
 const router = express.Router();
 
-// Khởi tạo các lớp theo đúng quan hệ phụ thuộc (DI)
-const userRepo = new UserRepositoryImpl(pool); 
+//=====================AUTH API=====================
+import { AuthController } from "../controllers/authController.js";
+import { AuthServiceImpl } from "../services/AuthServiceImpl.js";
+import UserRepositoryImpl from "../data/repositories/auth/UserRepositoryImpl.js";
+import OTPRepository from "../data/repositories/auth/OTPRepositoryImpl.js";
+import TokenRepositoryImpl from "../data/repositories/auth/TokenRepository.js";
+import { TokenService } from "../services/tokenService.js";
+import {registerValidation,loginValidation,verifyOTP,authenticateJWT,emailValidation,passwordValidation,} from "../middlewares/authMiddleware.js";
+
+const userRepo = new UserRepositoryImpl(pool);
 const otpRepo = new OTPRepository();
 const tokenRepo = new TokenRepositoryImpl();
 
 const tokenService = new TokenService(tokenRepo);
 const authService = new AuthServiceImpl(userRepo, otpRepo, tokenService);
-const authController = new AuthController(authService, tokenService);
+const authController = new AuthController(authService, tokenService, userRepo);
 
-//=====================AUTH API=====================
-router.post('/aubud/api/v1/send-otp', authController.sendOtp); //checking wass successfully
-router.post('/aubud/api/v1/verify-otp', verifyOTP(otpRepo), authController.verifyOtp);//checking wass successfully
-router.post('/aubud/api/v1/register', registerValidation, authController.register);  //checking wass successfully
-router.post('/aubud/api/v1/login', loginValidation, authController.login);  //checking wass successfully
-router.post('/aubud/api/v1/refresh-token', authController.refreshToken); 
-router.post('/aubud/api/v1/logout', authController.logOut);  //checking wass successfully
+router.get("/aubud/api/v1/auth/public-key", (req, res) => {
+  const publicKey = process.env.RSA_PUBLIC_KEY?.replace(/\\n/g, "\n");
 
-router.post('/aubud/api/v1/verify-email', emailValidation, authController.verifyEmail); //checking wass successfully
-router.post('/aubud/api/v1/change-password', passwordValidation, authController.changePassWord); //checking wass successfully
+  if (!publicKey) {
+    return res.status(500).json({ message: "Server chưa cấu hình RSA key" });
+  }
 
-router.post('/google',authController.loginWithGG);
+  return res.status(200).json({ publicKey });
+});
+router.post("/aubud/api/v1/auth/register",registerValidation,
+  authController.register,
+);
+router.post("/aubud/api/v1/auth/send-otp", authController.sendOtp);
+router.post("/aubud/api/v1/auth/verify-otp",verifyOTP(otpRepo),authController.verifyOtp,
+);
+router.post("/aubud/api/v1/auth/login", loginValidation, authController.login);
+router.post("/aubud/api/v1/auth/logout", authController.logOut);
+router.post("/aubud/api/v1/auth/verify-email",emailValidation,authController.verifyEmail,);
+router.post("/aubud/api/v1/auth/reset-password",passwordValidation,authController.changePassWord,);
+router.post("/aubud/api/v1/auth/refresh-token", authController.refreshToken);
+router.post("/auth/google", authController.loginWithGG); // Not yet tested
 
-export default router
+//=====================TRANSACTION API=====================
+import { TransactionController } from "../controllers/transactionController.js";
+import { TransactionService } from "../services/applicationService/TransactionService.js";
+import { TransactionRepository } from "../data/repositories/TransactionRepository.js";
+
+const transactionRepo = new TransactionRepository(pool);
+const transactionService = new TransactionService(transactionRepo, userRepo);
+const transactionController = new TransactionController(transactionService);
+
+router.get("/aubud/api/v1/transaction",transactionController.getTransactions);
+router.post("/aubud/api/v1/transaction",authenticateJWT,transactionController.create,);
+router.put("/aubud/api/v1/transaction",authenticateJWT,transactionController.create,);
+router.delete("/aubud/api/v1/transaction",authenticateJWT,transactionController.delete,);
+
+//=====================WALLET API=====================
+import { WalletRepositoryFactory } from "../utils/factories/WalletRepositoryFactory.js";
+import { WalletService } from "../services/applicationService/WalletService.js";
+import { WalletController } from "../controllers/walletController.js";
+import { validateActionType, validateHistoryActionType,validateWalletBody,validateTransactionBody,validateConvertBody } from "../middlewares/wallet.middleware.js";
+
+const factory    = new WalletRepositoryFactory(pool);
+const service    = new WalletService(factory);
+const controller = new WalletController(service);
+
+router.get("/aubud/api/v1/wallet/all/",authenticateJWT,  controller.getAll)
+router.get("/aubud/api/v1/wallet/one/",  controller.getById)
+router.post('/aubud/api/v1/wallet/convert/',authenticateJWT,  validateConvertBody, controller.convert);
+
+router.post("/aubud/api/v1/wallet/:actionType",authenticateJWT, validateActionType, validateWalletBody, controller.create)
+router.put("/aubud/api/v1/wallet/:actionType/:walletId",authenticateJWT, validateActionType, validateWalletBody, controller.update)
+router.delete("/aubud/api/v1/wallet/:actionType/:walletId",authenticateJWT, validateActionType, controller.delete)
+
+router.get( '/aubud/api/v1/wallet/:actionType/:walletId/history', authenticateJWT,     validateHistoryActionType, controller.getHistory);
+router.post('/aubud/api/v1/wallet/:actionType/transaction',authenticateJWT,  validateHistoryActionType, validateTransactionBody, controller.createTransaction);
+
+//=====================CATEGORY API=====================
+import { CategoryController } from "../controllers/categoryController.js";
+import { CategoryService } from "../services/applicationService/CategoryService.js";
+import { CategoryRepository } from "../data/repositories/CategoryRepository.js";
+
+const categoryRepo = new CategoryRepository(pool)
+const categoryService = new CategoryService(categoryRepo)
+const categoryController = new CategoryController(categoryService)
+
+router.get("/aubud/api/v1/category/all/:userId",authenticateJWT, categoryController.getAllCategory)
+router.get("/aubud/api/v1/category/suggested/:userId",authenticateJWT, categoryController.getSuggestedCategory)
+
+router.put("/aubud/api/v1/category/",authenticateJWT, categoryController.updateCategory)
+router.post("/aubud/api/v1/category/",authenticateJWT, categoryController.createCategory)
+router.delete("/aubud/api/v1/category/:categoryId",authenticateJWT, categoryController.deleteCategory)
+
+export default router;

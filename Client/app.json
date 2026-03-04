@@ -2,6 +2,8 @@
   "expo": {
     "name": "Client",
     "slug": "Client",
+    "owner":"truyenjjjjjjjj",
+    "scheme": "aubud-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

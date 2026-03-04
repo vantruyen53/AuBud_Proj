@@ -6,7 +6,7 @@ const mockCategoriesSending: ICategory[] = [
     name: 'Food',
     type: 'sending',
     iconName: 'restaurant',
-    iconColor: '255, 107, 107', // Đỏ san hô
+    iconColor: '255, 107, 107', 
   },
   {
     id: 'c2',

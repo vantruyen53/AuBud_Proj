@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import {BarChartProps} from '@/src/models/IApp';
 
-const BarChart: React.FC<BarChartProps> = (props:any) => {
-  const diff = props.income - props.sending;
-  const maxVal = Math.max(props.sending, props.income, 1);
+const BarChart: React.FC<BarChartProps> = ({sending, income}) => {
+  const diff = income - sending;
+  const maxVal = Math.max(sending, income, 1);
   
   // 1. Tạo 2 giá trị khởi tạo cho Animation (từ 0 đến 1)
   const animSending = useRef(new Animated.Value(0)).current;
@@ -27,7 +27,7 @@ const BarChart: React.FC<BarChartProps> = (props:any) => {
         useNativeDriver: false,
       }),
     ]).start();
-  }, [props.sending, props.income]);
+  }, [sending, income]);
 
   const formatCurrency = (num: number) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " ₫";
@@ -36,12 +36,12 @@ const BarChart: React.FC<BarChartProps> = (props:any) => {
   // 3. Nội suy giá trị từ animation ra phần trăm chiều cao
   const sendingHeight = animSending.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', `${(props.sending / maxVal) * 100}%`],
+    outputRange: ['0%', `${(sending / maxVal) * 100}%`],
   });
 
   const incomeHeight = animIncome.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', `${(props.income / maxVal) * 100}%`],
+    outputRange: ['0%', `${(income / maxVal) * 100}%`],
   });
 
   return (
@@ -66,12 +66,12 @@ const BarChart: React.FC<BarChartProps> = (props:any) => {
       <View style={styles.infoWrapper}>
         <View style={styles.dataRow}>
           <Text style={styles.labelSmall}>SENDING</Text>
-          <Text style={[styles.amountBig, { color: '#EF4444' }]}>{formatCurrency(props.sending)}</Text>
+          <Text style={[styles.amountBig, { color: '#EF4444' }]}>{formatCurrency(sending)}</Text>
         </View>
 
         <View style={styles.dataRow}>
           <Text style={styles.labelSmall}>INCOME</Text>
-          <Text style={[styles.amountBig, { color: '#10B981' }]}>{formatCurrency(props.income)}</Text>
+          <Text style={[styles.amountBig, { color: '#10B981' }]}>{formatCurrency(income)}</Text>
         </View>
 
         <View style={[styles.dataRow, styles.borderTop]}>

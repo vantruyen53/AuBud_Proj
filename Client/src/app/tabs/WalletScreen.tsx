@@ -1,56 +1,70 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, Animated } from 'react-native';
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
-import { useProvider } from "@/src/hooks/useProvider";
-import { formatCurrency } from "@/src/utils/format";
-import { SwipeListView } from "react-native-swipe-list-view";
-import { HomeStackNavProp } from "../../models/types/RootStackParamList";
-import { IWallet, IDebtMaster, IGroupFund, ISaving } from '@/src/models/IApp';
-import mockGroupFund from '@/src/store/seed/groupFunds';
-import mockWallets from '@/src/store/seed/wallets';
-import mockSaving from '@/src/store/seed/saving';
-import { mockDebts } from '@/src/store/seed/debt';
-import styles from '@/src/assets/styles/walletStyle';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Eye, EyeOff } from "lucide-react-native";
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { ModalForm } from '@/src/components/customModal';
+import { useNavigation, useFocusEffect  } from "@react-navigation/native";
+
+import { formatCurrency } from "@/src/utils/format";
+import { WalletApp} from '@/src/store/application/WalletApp';
+import { HomeStackNavProp } from "../../models/types/RootStackParamList";
+import { IWallet,ISaving,IDebt,IGroupFund } from "@/src/models/interface/Entities";
+import styles from '@/src/assets/styles/walletStyle';
+import { useProvider } from "@/src/hooks/useProvider";
+import { extractWallet } from '@/src/utils/helper';
+
 
 export default function WalletScreen() {
-  const { isShowData, toggleShowData } = useProvider();
-  const [wallets, setWallets] = useState<IWallet[]>(mockWallets);
-  const [savings, setSavings] = useState<ISaving[]>(mockSaving);
-  const [groupFunds, setGroupFunds] = useState<IGroupFund[]>(mockGroupFund);
-  const [debts, setDebts] = useState<IDebtMaster[]>(mockDebts);
+  // 1. State quản lý dữ liệu gốc
+  const [wallets, setWallets] = useState<IWallet[]>([]);
+  const [savings, setSavings] = useState<ISaving[]>([]);
+  const [groupFunds, setGroupFunds] = useState<IGroupFund[]>([]);
+  const [debts, setDebts] = useState<IDebt[]>([]);
+  //mỗi thao tác CRUD thành công gọi triggerRefresh() đẻe re-render view
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { isShowData, toggleShowData, id, accessToken } = useProvider();
+  const [totalData, setTotalData]=useState<{w:number, s:number, gF:number, lf:number, lt:number, tNW: number}>({
+    w:0, s:0, gF:0, lf:0, lt:0, tNW:0
+  });
 
   // Modal states
   const [isModalVisible, setModalVisible] = useState(false);
   const [isTypeModalVisible, setTypeModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'wallet' | 'saving' | 'group' | 'debt' | null>(null);
+
+  //Handle data
+  const [formData, setFormData] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [typeAction, setTypeAction]=useState<'add' | 'edit'>('add')
 
-  // Form states
-  const [formData, setFormData] = useState<any>({});
+  const triggerRefresh = () => setRefreshKey(prev => prev + 1);
+  const navigation = useNavigation<HomeStackNavProp>();
+  const walletApp = new WalletApp({id:id, accessToken:accessToken})
 
-  // Total amount 
-  const walletTotal = useMemo(()=>{
-    return wallets.reduce((sum, w) => sum + w.balance, 0);
-  },[wallets])
-  const savingsTotal = useMemo(()=>{
-    return savings.reduce((sum, s) =>  sum + s.balance, 0);
-  },[savings])
-  const groupTotal =useMemo(()=> groupFunds.reduce((sum, g) => sum + g.balance, 0),[groupFunds])
-  const totalAssets = useMemo(()=>{return walletTotal+savingsTotal+groupTotal}, [walletTotal,savingsTotal,groupTotal])
-  const totalDebts = useMemo(() => {
-    return debts.filter(d => d.type === 'loan_from').reduce((sum, d) => sum + d.remaining, 0);
-  }, [debts]);
-  const totalLending = useMemo(() => {
-    return debts.filter(d => d.type === 'loan_to').reduce((sum, d) => sum + d.remaining, 0);
-  }, [debts]);
+  useFocusEffect(
+    useCallback(()=>{
+      const fetchData = async ()=>{
+        const result =await walletApp.loadWalletScreenData()
+        if(result){
+          setWallets(result.rawData.wallets)
+          setSavings(result.rawData.savings)
+          setGroupFunds(result.rawData.groupFunds)
+          setDebts(result.rawData.debts)
 
-  const handleDelete = (type: string, id: string) => {
+          setTotalData({
+            w:result.summary.totalWalletBalance, s:result.summary.totalSavingBalance, gF:result.summary.totalGroupFundBalance,
+            lf:result.summary.totalLoanFrom, lt:result.summary.totalLoanTo, tNW:result.totalNetWorth
+          })
+        }
+      }
+      fetchData();
+    },[refreshKey])
+  )
+
+  const handleDelete = (type: string, walletId: string) => {
     Alert.alert(
       "Delete",
       "Are you sure to delete this wallet?",
@@ -59,11 +73,10 @@ export default function WalletScreen() {
         { 
           text: "Delele", 
           style: "destructive",
-          onPress: () => {
-            if (type === 'wallet') setWallets(prev => prev.filter(item => item.id !== id));
-            if (type === 'saving') setSavings(prev => prev.filter(item => item.id !== id));
-            if (type === 'group') setGroupFunds(prev => prev.filter(item => item.id !== id));
-            if (type === 'debt') setDebts(prev => prev.filter(item => item.id !== id));
+          onPress: async () => {
+            const result = await walletApp.deleteWallet(walletId, type as 'wallet' | 'saving' | 'debt')
+            if(result)
+              triggerRefresh()
             setModalVisible(false);
           }
         }
@@ -71,26 +84,34 @@ export default function WalletScreen() {
     );
   };
 
+  const handleSave= async()=>{
+    const payLoad = extractWallet(modalType, formData, id)
+    if(payLoad)
+     try {
+        if (typeAction === 'add') {
+          const reslut =await walletApp.createNewWallet(payLoad)
+          if(reslut)
+            triggerRefresh() 
+        } else {
+          const reslut = await walletApp.updateWallet(payLoad)
+          if(reslut)
+            triggerRefresh() 
+        }
+        setModalVisible(false)
+      } catch (err) {
+        Alert.alert("Error", `Something went wrong ${err}`)
+      }
+    else
+      Alert.alert("Error", "All field required")
+  }
+
   const openModal = (type: 'wallet' | 'saving' | 'group' | 'debt', item: any = null, typeAction:'edit'|'add') => {
     setModalType(type);
-    setEditingItem(item);
-    setFormData(item || getInitialFormData(type));
     setModalVisible(true);
+    setEditingItem(item);
+    setFormData(item);
     setTypeAction(typeAction)
   };
-
-  const getInitialFormData = (type: string) => {
-    switch(type) {
-      case 'wallet': return { name: '', balance: '0'};
-      case 'saving': return { name: '', balance: '0', target: '0', icon: 'car-outline' };
-      case 'group': return { name: '', balance: '0', members: '1', icon: 'home-group' };
-      case 'debt': return { name: '', amount: '0', remaining: '0', type: 'borrow', to_other: '' };
-      default: return {};
-    }
-  };
-
-  const handleSave= ()=>{}
-
 
   return (
     <GestureHandlerRootView style={{flex:1}}>
@@ -114,7 +135,7 @@ export default function WalletScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.totalAmount}>{isShowData ? formatCurrency(totalAssets, {absolute:true}) : '******'}</Text>
+              <Text style={styles.totalAmount}>{isShowData ? formatCurrency(totalData.tNW, {absolute:true}) : '******'}</Text>
             </View>
 
           </SafeAreaView>
@@ -127,13 +148,15 @@ export default function WalletScreen() {
             showsVerticalScrollIndicator={false}
           >
             {/* Wallets Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Wallets</Text>
-              <View style={styles.sectionTotal}>
-                <Text style={styles.headerLabel}>Total:</Text>
-                <Text style={styles.headerValue}>{isShowData ? formatCurrency(walletTotal, {absolute:true}) : '******'}</Text>
+            {wallets.length>0&&
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Wallets</Text>
+                <View style={styles.sectionTotal}>
+                  <Text style={styles.headerLabel}>Total:</Text>
+                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.w, {absolute:true}) : '******'}</Text>
+                </View>
               </View>
-            </View>
+            }
             {wallets?.map(item=>(
               <TouchableOpacity 
                   key={item.id}  
@@ -155,13 +178,16 @@ export default function WalletScreen() {
             ))}
 
             {/* Group Funds Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Group funds</Text>
-              <View style={styles.sectionTotal}>
-                <Text style={styles.headerLabel}>Total:</Text>
-                <Text style={styles.headerValue}>{isShowData ? formatCurrency(groupTotal, {absolute:true}) : '******'}</Text>
+            {
+              groupFunds.length>0 &&
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Group funds</Text>
+                <View style={styles.sectionTotal}>
+                  <Text style={styles.headerLabel}>Total:</Text>
+                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.gF, {absolute:true}) : '******'}</Text>
+                </View>
               </View>
-            </View>
+            }
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupFundsScroll}>
               {groupFunds?.map(item=>(
                 <TouchableOpacity 
@@ -172,24 +198,27 @@ export default function WalletScreen() {
                   <View style={styles.groupIconBox}>
                     <MaterialIcons name='groups' size={24} color="#6366F1" />
                   </View>
-                  <Text style={styles.groupName}>{item.name}</Text>
+                  <Text style={styles.groupName}>{item.fundName}</Text>
                   <Text style={styles.groupBalance}>{isShowData ? formatCurrency(item.balance, {absolute:true}) : '******'}</Text>
                   <View style={styles.groupMembers}>
                     <MaterialIcons name="person" size={12} color="#94A3B8" />
-                    <Text style={styles.groupMembersText}>{item.members} member</Text>
+                    <Text style={styles.groupMembersText}>{item.groupName} member</Text>
                   </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             {/* Savings Section */}
-            <View style={styles.sectionHeader}>
+           {
+            savings.length>0 &&
+             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Savings</Text>
               <View style={styles.sectionTotal}>
                 <Text style={styles.headerLabel}>Total:</Text>
-                <Text style={styles.headerValue}>{isShowData ? formatCurrency(savingsTotal, {absolute:true}) : '******'}</Text>
+                <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.s, {absolute:true}) : '******'}</Text>
               </View>
             </View> 
+           }
             {savings?.map(item=>(
                  <TouchableOpacity 
                   key={item.id}
@@ -219,19 +248,22 @@ export default function WalletScreen() {
             ))}
 
             {/* Debts Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Debts & Loan</Text>
-              <View>
-                <View style={styles.sectionTotal}>
-                  <Text style={styles.headerLabel}>Total debts:</Text>
-                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalDebts, {absolute:true}) : '******'}</Text>
-                </View>
-                <View style={styles.sectionTotal}>
-                  <Text style={styles.headerLabel}>Total loan:</Text>
-                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalLending, {absolute:true}) : '******'}</Text>
+            {
+              debts.length>0&&
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Debts & Loan</Text>
+                <View>
+                  <View style={styles.sectionTotal}>
+                    <Text style={styles.headerLabel}>Total debts:</Text>
+                    <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.lf, {absolute:true}) : '******'}</Text>
+                  </View>
+                  <View style={styles.sectionTotal}>
+                    <Text style={styles.headerLabel}>Total loan:</Text>
+                    <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.lt, {absolute:true}) : '******'}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            }
             {debts?.map((item)=>{
                 const isLoanFrom = item.type === "loan_from";
                 const mainColor = isLoanFrom ? '#059669' : '#d90000';
@@ -256,7 +288,7 @@ export default function WalletScreen() {
                         {isLoanFrom ? `Borrowed from` : `Lent to`}
                       </Text>
                       <Text style={styles.partnerNameText}>{item.partnerName}</Text>
-                      <Text style={styles.timeLoan}>{item.createAt}</Text>
+                      <Text style={styles.timeLoan}>{item.name}</Text>
                     </View>
                   </View>
 
@@ -345,6 +377,7 @@ export default function WalletScreen() {
           formData={formData}
           setFormData={setFormData}
           onPressDelete={handleDelete}
+          onPressSave={handleSave}
         />
 
       </View>

@@ -5,32 +5,32 @@ import { useNavigation, StackActions } from "@react-navigation/native";
 import { useEffect, useState, useRef } from "react";
 
 export default function CustomSplashScreen() {
-  const { isAuthenticated, isLoading} = useProvider();
+  const { isAuthenticated, isLoading } = useProvider();
   const navigation = useNavigation();
-  const splashText = "AuuBud";
+  const splashText = "AuBud";
 
   const [typedText, setTypedText] = useState("");
-  const charIndex = useRef(0);
-  const isAnimationDone = useRef(false);
-  // Ref để kiểm tra xem đã đủ 2 giây chưa
-  const isTimeElapsed = useRef(false);
+  const [isAnimationDone, setIsAnimationDone] = useState(false);
+  const [isTimeElapsed, setIsTimeElapsed] = useState(false);
 
+  // 1. Logic chạy animation chữ
   useEffect(() => {
+    let charIndex = 0;
     const speed = 120;
     const interval = setInterval(() => {
-      if (charIndex.current <= splashText.length) {
-        setTypedText((prev) => prev + splashText.charAt(charIndex.current));
-        charIndex.current++;
+      if (charIndex < splashText.length) {
+        setTypedText(splashText.substring(0, charIndex + 1));
+        charIndex++;
       } else {
         clearInterval(interval);
+        setIsAnimationDone(true); // Cập nhật state để trigger re-render
       }
     }, speed);
 
-    // Tối thiểu 1.5 giây
+    // 2. Logic đảm bảo thời gian chờ tối thiểu 2s
     const timeout = setTimeout(() => {
-      isTimeElapsed.current = true;
-      checkAndNavigate();
-    }, 1500);
+      setIsTimeElapsed(true); // Cập nhật state để trigger re-render
+    }, 2000);
 
     return () => {
       clearInterval(interval);
@@ -38,25 +38,16 @@ export default function CustomSplashScreen() {
     };
   }, []);
 
+  // 3. Effect theo dõi sự thay đổi của cả 3 điều kiện
   useEffect(() => {
-    if (!isLoading) {
-      checkAndNavigate();
+    if (isAnimationDone && isTimeElapsed && !isLoading) {
+      if (isAuthenticated) {
+        navigation.dispatch(StackActions.replace("LayoutTabs"));
+      } else {
+        navigation.dispatch(StackActions.replace("LayoutAuth"));
+      }
     }
-  }, [isLoading]);
-
-  // Hàm kiểm tra và điều hướng
-  const checkAndNavigate = () => {
-    // Đủ 3 điều kiện: animation xong + thời gian tối thiểu + auth check xong
-    if (!isAnimationDone.current) return;
-    if (!isTimeElapsed.current) return;
-    if (isLoading) return;
-
-    if (isAuthenticated) {
-      navigation.dispatch(StackActions.replace("LayoutTabs"));
-    } else {
-      navigation.dispatch(StackActions.replace("LayoutAuth"));
-    }
-  };
+  }, [isAnimationDone, isTimeElapsed, isLoading, isAuthenticated]);
 
   return (
     <View style={styles.container}>

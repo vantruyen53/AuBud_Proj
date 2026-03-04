@@ -12,6 +12,19 @@ const convertDateFormat = (dateString: string, showYear:boolean): string => {
   else return `${day}/${month}`
 };
 
+export const dateTimeStr = () => {
+    const today = new Date();
+
+    const year = today.getFullYear();          
+    const month = today.getMonth() + 1;       
+    const day = today.getDate();            
+    const hours = today.getHours();          
+    const minutes = today.getMinutes();      
+    const seconds = today.getSeconds();      
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 const formatCurrency = (amount: number, config: { showSign?: boolean, showCurrency?: boolean, absolute?: boolean } = {}) => {
   const { showSign = true, showCurrency = true, absolute = false } = config;
   const val = absolute ? Math.abs(amount) : amount;
@@ -30,6 +43,14 @@ const formatCurrency = (amount: number, config: { showSign?: boolean, showCurren
 const toInitialFormatCurrency = (amount:String)=>{
   return amount.replace(/\D/g,"");
 }
+export const toDateTimeFormat=(year:string, month:string, day:string)=>{
+  const today = new Date();
+  const hours = today.getHours();          
+  const minutes = today.getMinutes();      
+  const seconds = today.getSeconds();
+
+   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
 
 const formatShortCurrency = (amount: number) => {
   const sign = amount < 0 ? '-' : '';
@@ -40,3 +61,4 @@ const formatShortCurrency = (amount: number) => {
 };
 
 export{dateFormat, formatCurrency, toInitialFormatCurrency, formatShortCurrency, convertDateFormat}
+

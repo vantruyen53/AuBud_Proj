@@ -14,9 +14,56 @@ const styles = StyleSheet.create({
     },
     container: {
       flex: 1,
-      backgroundColor: Colors.light.inputBg, // Xanh chủ đạo
+      backgroundColor: Colors.light.inputBg,
       padding: 16,
-      paddingBottom:0,
+      borderTopLeftRadius: 40,
+      borderTopRightRadius: 40,
+      marginTop: -35,
+      paddingBottom: 0,
+      paddingTop:0,
+      overflow:'hidden'
+    },
+    navBar:{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor:Colors.light.primary,
+    },
+    headerProfile: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingBottom: 45,
+    },
+    headerAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerAvatarText: {
+      color: '#FFF',
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    headerWelcome: {
+      justifyContent: 'center',
+    },
+    headerGreeting: {
+      fontSize: 12,
+      color: '#fff',
+      fontWeight: '500',
+    },
+    headerUserName: {
+      fontSize: 16,
+      color: '#fff',
+      fontWeight: '600',
     },
     headerContainer: {
       paddingBottom: 20,
@@ -28,13 +75,14 @@ const styles = StyleSheet.create({
       marginBottom: 20,
       marginTop: 8,
     },
-    topLeft: {
+    notification: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-    },  
-    notifacation:{
-      position:'relative'
+      backgroundColor: Colors.light.tabIconSelected,
+      borderRadius: 12,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      position: 'relative',
     },
     noteText:{
       position:'absolute',
@@ -48,7 +96,7 @@ const styles = StyleSheet.create({
       fontWeight:'700',
       color:Colors.light.primary,
       padding:3,
-      backgroundColor:'#fff'
+      backgroundColor:'#FF0000'
     },
     userName: {
       color: mainColor,
@@ -59,6 +107,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+      paddingBottom: 40,
     },
     historyButton: {
       flexDirection: 'row',
@@ -272,6 +321,14 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: '#FFF',
+  },
+
+  noTransactionsText: {
+    fontSize: 14,
+    color: Colors.light.placeholder,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 20,
   },
   
   transactionCard: {

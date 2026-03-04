@@ -11,6 +11,8 @@ import { Colors, Fonts } from "@/src/constants/theme";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { useState,  } from "react";
 import { useNavigation, StackActions } from "@react-navigation/native";
+import { useProvider } from "@/src/hooks/useProvider";
+import {createIconAcc} from '@/src/utils/helper';
 
 interface IUser{
   name:string,
@@ -21,11 +23,7 @@ export default function MoreScreen() {
   const navigation = useNavigation();
   const [user, serUser]=useState<IUser>({name:'nguyen truyen', email:'nguyentruyen@gmail.com'})
 
-  const createIconAcc=()=>{
-    const nameArray = user.name.split(' ');
-    return `${nameArray[0][0].toUpperCase()}${nameArray[nameArray.length-1][0].toUpperCase()}`;
-  }
-  const iconAcc = createIconAcc();
+  const iconAcc = createIconAcc(user.name);
   const renderMenuItem = (icon: any, title: string, showChevron = true) => (
     <TouchableOpacity style={styles.menuItem}>
       <View style={styles.menuItemLeft}>
@@ -38,6 +36,8 @@ export default function MoreScreen() {
     </TouchableOpacity>
   );
 
+  const {signOut} = useProvider();
+
   const handleSignOut = ()=>{
     Alert.alert("Sign out", "Are you sure to sign ut?", [
       { text: "Cancel", style: "cancel" },
@@ -46,6 +46,7 @@ export default function MoreScreen() {
         style: "destructive",
         onPress: () => {
           navigation.dispatch(StackActions.replace("LayoutAuth"))
+          signOut();
         },
       },
     ]);

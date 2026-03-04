@@ -1,212 +1,122 @@
-import {
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Animated,
-  SectionListData,
-} from "react-native";
-import { useState, useEffect, useMemo } from "react";
+import {Text,View,TouchableOpacity,TextInput,Alert,Animated,SectionListData,} from "react-native";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { styles } from "@/src/assets/styles/historyStyle";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
-import { Colors, linearGradient } from "@/src/constants/theme";
-import { useNavigation } from "@react-navigation/native";
-import { HomeStackNavProp } from "../../../models/types/RootStackParamList";
+import { SwipeListView } from "react-native-swipe-list-view";
+import { LinearGradient } from "expo-linear-gradient";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
+// UI STATE
 import { ModalTime } from "../../../components/customModal";
-import {
-  dateFormat,
-  formatCurrency,
-  convertDateFormat,
-} from "@/src/utils/format";
 import MonthGrid from "@/src/components/monthGrid";
 import YearList from "@/src/components/yearList";
-import { IDateState } from "../../../models/IApp";
-import { LinearGradient } from "expo-linear-gradient";
-import { SwipeListView } from "react-native-swipe-list-view";
-import { getTransactionSections } from "../../../utils/generateSectionList ";
-import { ITransaction, ITransactionSection } from "../../../models/IApp";
 import Transaction from "../../../components/transaction";
 import Calendar from "@/src/components/calendar";
+import { styles } from "@/src/assets/styles/historyStyle";
+import { Colors, linearGradient } from "@/src/constants/theme";
+
+//CUSTOM VIEW
+import { useProvider } from "@/src/hooks/useProvider";
+import { HomeStackNavProp } from "../../../models/types/RootStackParamList";
+import {dateFormat,formatCurrency,convertDateFormat,} from "@/src/utils/format";
+import { IDateState, ITransactionItem } from "../../../models/interface/Entities";
+import { getTransactionSections } from "../../../utils/generateSectionList ";
+import { TransactionApp } from "@/src/store/application/TransactionApp";
+import { ITransactionSection } from "../../../models/IApp";
 
 export default function HistoryScreen() {
   const date = new Date();
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
+  const {id, accessToken}=useProvider()
+  const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
 
+  //UI STATE
+  const [timeLine, setTimeLine] = useState<"Date" | "Month" | "Year">("Date");
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>("sending");
   const [isSearch, setIsSearch] = useState(false);
   const [isOpenMonthGrid, setIsOpenMonthGrid] = useState(false);
   const [isOpenYearList, setIsOpenYearList] = useState(false);
   const [isOpenCalendar, setIsOpenCalendar] = useState(false);
-  const [content, setContent] = useState("");
-  const [timeLine, setTimeLine] = useState<"Date" | "Month" | "Year">("Date");
-  const [specificTime, setSpecificTime] = useState<IDateState>({
-    y: year.toString(),
-    m: month.toString(),
-    d: day.toString(),
-  });
   const [showModal, setShowModal] = useState(false);
   const [yearShown, setYearShown] = useState(year);
-  const [editingTx, setEditingTx] = useState<ITransaction | null>(null);
+  const [trigger, setTrigger]=useState(0)
+
+  //HANDLE DATA 
+  const [searchContent, setSearchContent] = useState("");
+  const [specificTime, setSpecificTime] = useState<IDateState>({y: year.toString(),m: month.toString(),d: day.toString(),});
+  const [editingTx, setEditingTx] = useState<ITransactionItem | null>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  //DATA MANAGEMENT
+  const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
+  const [summary, setSummary] = useState({totalSending: 0,totalIncome: 0,balance: 0,});
+
+  // Effect 1: set specificTime khi timeLine thay đổi
+  useFocusEffect(
+    useCallback(() => {
+      switch (timeLine) {
+        case "Date":
+          setSpecificTime({ y: year.toString(), m: month.toString(), d: day.toString() });
+          break;
+        case "Month":
+          setSpecificTime({ y: year.toString(), m: month.toString(), d: "" });
+          break;
+        case "Year":
+          setSpecificTime({ y: year.toString(), m: "", d: "" });
+          break;
+        default:
+          setSpecificTime({ y: year.toString(), m: month.toString(), d: "" });
+          break;
+      }
+    }, [timeLine])
+  );
+
+  // Effect 2: fetch data khi specificTime thay đổi
   useEffect(() => {
-    switch (timeLine) {
-      case "Date":
-        setSpecificTime({
-          y: year.toString(),
-          m: month.toString(),
-          d: day.toString(),
+    const fetchData = async () => {
+      const since = timeLine === "Date" ? 'day' : timeLine === "Month" ? 'month' : 'year';
+      const result = await tractionApp.getTransactionHistory(
+        parseInt(specificTime.d) || 0,
+        parseInt(specificTime.m) || 0,
+        parseInt(specificTime.y),
+        since
+      );
+      if (result) {
+        setAllTransactions(result.rawTransactions);
+        setSummary({
+          totalSending: result.totalSending,
+          totalIncome: result.totalIncome,
+          balance: result.balance,
         });
-        break;
-      case "Month":
-        setSpecificTime({ y: year.toString(), m: month.toString(), d: "" });
-        break;
-      case "Year":
-        setSpecificTime({ y: year.toString(), m: "", d: "" });
-        break;
-      default:
-        setSpecificTime({ y: year.toString(), m: month.toString(), d: "" });
-        break;
-    }
-  }, [timeLine]);
+      }
+    };
+    fetchData();
+  }, [specificTime, timeLine, searchContent, isSearch, trigger]);
 
-  const handleOverYear = () => {
-    Alert.alert("Warning", "You can't move to year that bigger current year!", [
-      { text: "Got it", style: "cancel" },
-    ]);
-  };
-
-  const selecteMonth = (monthSelected: string) => {
-    setSpecificTime({ y: yearShown.toString(), m: monthSelected, d: "" });
-    setIsOpenMonthGrid(false);
-  };
-  const selectYear = (yearSelected: string) => {
-    setSpecificTime({ y: yearSelected.toString(), m: "", d: "" });
-    setIsOpenYearList(false);
-  };
-
-  const preYear = (yearShown: number) => setYearShown(yearShown - 1);
-  const nexYear = (yearShown: number) => {
-    if (yearShown < year) {
-      setYearShown((prev) => prev + 1);
-    } else {
-      handleOverYear();
-    }
-  };
-
+  //3. Lọc danh và gom nhóm theo chữ cái
   const sections = useMemo(() => {
-    return getTransactionSections(activeCategoryTab);
-  }, [activeCategoryTab]);
+    const dataFilterd = allTransactions.filter(t => t.type===activeCategoryTab)  
+    return getTransactionSections(dataFilterd);
+  }, [activeCategoryTab, allTransactions, trigger]);
 
-  const handleEdit = (tx: ITransaction, rowMap: any) => {
-    if (rowMap[tx.id]) {
-      rowMap[tx.id].closeRow();
-    }
-    setEditingTx(tx);
-    setFormData(tx);
-    setModalVisible(true);
-  };
-
-  const handleDelete = (id: string, dateStr: string) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa giao dịch này không?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => {},
-        },
-      ],
-    );
-  };  
-
+  //4. Tạo các thành cho SwipeListView
   const renderHeader = () => (
     <>
-      {/* Header */}
-      <View style={styles.header}>
-        {isSearch ? (
-          <>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => setIsSearch(false)}
-            >
-              <MaterialIcons name="arrow-back-ios" size={16} />
-            </TouchableOpacity>
-            <View style={styles.formSearch}>
-              <TextInput
-                value={content}
-                onChangeText={setContent}
-                style={styles.contentSearch}
-                autoFocus
-              />
-              {content.length > 0 ? (
-                <TouchableOpacity
-                  onPress={() => setContent("")}
-                  style={styles.clearFrom}
-                >
-                  <MaterialIcons name="close" />
-                </TouchableOpacity>
-              ) : (
-                ""
-              )}
-            </View>
-            <TouchableOpacity style={styles.filterSearch} onPress={() => {}}>
-              <MaterialIcons
-                name="filter-list"
-                size={20}
-                color={Colors.light.iconLight}
-              />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="arrow-back-ios"
-                size={20}
-                color={Colors.light.iconLight}
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>History transaction</Text>
-            <TouchableOpacity
-              style={styles.searchButton}
-              onPress={() => setIsSearch(true)}
-            >
-              <MaterialIcons
-                name="search"
-                size={20}
-                color={Colors.light.tabIconDefault}
-              />
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-
       {/* Selecte time  */}
       <View style={styles.selecteTime}>
-        <View style={styles.row}>
+        <View style={styles.tabsSelectTime  }>
           <TouchableOpacity
             onPress={() => setShowModal(true)}
             style={styles.selecteTimeBTn}
           >
-            <Text style={styles.selecteTimeText}>{timeLine}</Text>
-            <MaterialIcons name="crop-free" size={16} />
+            <Text style={[styles.selecteTimeText,{color:"#fff"}]}>{timeLine}</Text>
+            <MaterialIcons name="crop-free" size={16} color="#fff"/>
           </TouchableOpacity>
-          <View style={styles.placeHolder} />
-        </View>
 
-        <View style={styles.row}>
           <TouchableOpacity
             onPress={
               timeLine === "Month"
@@ -215,9 +125,9 @@ export default function HistoryScreen() {
                   ? () => setIsOpenYearList(!isOpenYearList)
                   : () => setIsOpenCalendar(!isOpenCalendar)
             }
-            style={styles.selecteTimeBTn}
+            style={[styles.selecteTimeBTn, {backgroundColor:'#fff'}]}
           >
-            <Text style={styles.selecteTimeText}>
+            <Text style={[styles.selecteTimeText, {color:"#006c87",}]}>
               {timeLine === "Date"
                 ? dateFormat(
                     parseInt(specificTime.d),
@@ -230,9 +140,8 @@ export default function HistoryScreen() {
                     ? specificTime.y
                     : null}
             </Text>
-            <MaterialIcons name="crop-free" size={16} />
+            <MaterialIcons name="crop-free" size={16} color="#006c87"/>
           </TouchableOpacity>
-          <View style={styles.placeHolder} />
         </View>
       </View>
 
@@ -259,7 +168,7 @@ export default function HistoryScreen() {
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {formatCurrency(0, { absolute: true })}
+              {formatCurrency(summary.balance, { absolute: true })}
             </Text>
             <View style={styles.statLabelRow}>
               <MaterialDesignIcons
@@ -279,7 +188,7 @@ export default function HistoryScreen() {
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                {formatCurrency(0, { absolute: true })}
+                {formatCurrency(summary.totalIncome, { absolute: true })}
               </Text>
               <View style={styles.statLabelRow}>
                 <MaterialDesignIcons
@@ -299,7 +208,7 @@ export default function HistoryScreen() {
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                {formatCurrency(0, { absolute: true })}
+                {formatCurrency(summary.totalSending, { absolute: true })}
               </Text>
               <View style={styles.statLabelRow}>
                 <MaterialDesignIcons
@@ -352,6 +261,9 @@ export default function HistoryScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      {sections.length===0 && (
+           <Text style={styles.noTransactionsText}>No transactions today</Text>
+        )}
     </>
   );
   const renderSectionHeader = (info: { section: any }) => (
@@ -362,12 +274,12 @@ export default function HistoryScreen() {
     </View>
   );
   const renderItem = (data: any, rowMap: any) => {
-    const item = data.item as ITransaction;
+    const item = data.item as ITransactionItem;
     return (
       <Transaction
         title={item.title}
         wallet={item.wallet}
-        amount={formatCurrency(parseInt(item.amount))}
+        amount={formatCurrency(item.type==='sending'?Number(`-${item.amount}`):item.amount)}
         categoryName={item.category.name}
         iconName={item.category.iconName}
         iconColor={item.category.iconColor}
@@ -378,37 +290,153 @@ export default function HistoryScreen() {
     );
   };
 
-
+  //5. Các handle cho custom modal
+  const handleOverYear = () => {
+    Alert.alert("Warning", "You can't move to year that bigger current year!", [
+      { text: "Got it", style: "cancel" },
+    ]);
+  };
+  const selecteMonth = (monthSelected: string) => {
+    setSpecificTime({ y: yearShown.toString(), m: monthSelected, d: "" });
+    setIsOpenMonthGrid(false);
+  };
+  const selectYear = (yearSelected: string) => {
+    setSpecificTime({ y: yearSelected.toString(), m: "", d: "" });
+    setIsOpenYearList(false);
+  };
+  const preYear = (yearShown: number) => setYearShown(yearShown - 1);
+  const nexYear = (yearShown: number) => {
+    if (yearShown < year) {
+      setYearShown((prev) => prev + 1);
+    } else {
+      handleOverYear();
+    }
+  };
   const handleDateSelect = (year: number, m: number, d: number) =>
     setSpecificTime({ y: year.toString(), m: m.toString(), d: d.toString() });
 
+  //6. Hanld sửa và xóa
+  const handleEdit = (tx: ITransactionItem, rowMap: any) => {
+    if (rowMap[tx.id]) {
+      rowMap[tx.id].closeRow();
+    }
+    setEditingTx(tx);
+    setFormData(tx);
+    setModalVisible(true);
+  };
+  const handleDelete = (payLoad: ITransactionItem) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa giao dịch này không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            const result = await tractionApp.deleteTransaction(payLoad);
+            if(result)
+              setTrigger(pre=>pre+1)
+          },
+        },
+      ],
+    );
+  };  
+
   const navigation = useNavigation<HomeStackNavProp>();
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* list transaction */}
-      <SwipeListView
-        useSectionList
-        sections={sections as any}
-        keyExtractor={(item: ITransaction) => item.id}
-        rightOpenValue={-80}
-        disableRightSwipe={true}
-        swipeToOpenPercent={40}
-        showsVerticalScrollIndicator={false}
-        renderSectionHeader={renderSectionHeader}
-        ListHeaderComponent={renderHeader}
-        renderItem={renderItem}
-        renderHiddenItem={(data, rowMap) => (
-          <TouchableOpacity
-            onPress={() => handleDelete(data.item.id, data.item.date)}
-            style={styles.deleteAction}
-          >
-            <Animated.View style={styles.deleteActionContent}>
-              <Text style={styles.deleteActionText}>Delete</Text>
-            </Animated.View>
-          </TouchableOpacity>
-        )}
-      />
-      {isOpenMonthGrid && timeLine === "Month" ? (
+    <View  style={styles.container}>
+       <View style={{  backgroundColor:"#12D0FF", paddingBottom:30, paddingHorizontal:16, paddingTop: 10}}>
+          <SafeAreaView edges={["top"]} style={styles.header}>
+            {isSearch ? (
+              <>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={() => setIsSearch(false)}
+                >
+                  <MaterialIcons name="arrow-back-ios" size={16} color="#fff"/>
+                </TouchableOpacity>
+                <View style={styles.formSearch}>
+                  <TextInput
+                    value={searchContent}
+                    onChangeText={setSearchContent}
+                    style={styles.contentSearch}
+                    autoFocus
+                  />
+                  {searchContent.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setSearchContent("")}
+                      style={styles.clearFrom}
+                    >
+                      <MaterialIcons name="close" />
+                    </TouchableOpacity>
+                  ) : (
+                    ""
+                  )}
+                </View>
+                <TouchableOpacity style={styles.filterSearch} onPress={() => {}}>
+                  <MaterialIcons
+                    name="filter-list"
+                    size={20}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={() => navigation.goBack()}
+                >
+                  <MaterialIcons
+                    name="arrow-back-ios"
+                    size={18}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>History transaction</Text>
+                <TouchableOpacity
+                  style={styles.searchButton}
+                  onPress={() => setIsSearch(true)}
+                >
+                  <MaterialIcons
+                    name="search"
+                    size={20}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </>
+            )}
+          </SafeAreaView>
+       </View>
+
+       <View style={styles.containerList}>
+          <SwipeListView
+          useSectionList
+          sections={sections as any}
+          keyExtractor={(item: ITransactionItem) => item.id}
+          rightOpenValue={-80}
+          disableRightSwipe={true}
+          swipeToOpenPercent={40}
+          showsVerticalScrollIndicator={false}
+          renderSectionHeader={renderSectionHeader}
+          ListHeaderComponent={renderHeader}
+          renderItem={renderItem}
+          renderHiddenItem={(data, rowMap) => (
+            <TouchableOpacity
+              onPress={() => handleDelete(data.item)}
+              style={styles.deleteAction}
+            >
+              <Animated.View style={styles.deleteActionContent}>
+                <Text style={styles.deleteActionText}>Delete</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          )}
+        />
+       </View>
+
+       {isOpenMonthGrid && timeLine === "Month" ? (
         <MonthGrid
           yearShown={yearShown}
           preYear={() => preYear(yearShown)}
@@ -431,6 +459,6 @@ export default function HistoryScreen() {
           specificTime={specificTime}
         />
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }

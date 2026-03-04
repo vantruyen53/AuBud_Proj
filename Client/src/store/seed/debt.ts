@@ -1,4 +1,6 @@
 import { IDebtMaster, IDebtTransaction } from "@/src/models/IApp";
+import {  IDebt} from "@/src/models/interface/Entities";
+
 export const mockDebts: IDebtMaster[] = [
   {
     id: 'debt_001',
@@ -28,6 +30,36 @@ export const mockDebts: IDebtMaster[] = [
     createAt: '2026-02-12',
   },
 ];
+
+export const mockDebts2:IDebt[]=[
+  {
+    id: 'debt_001',
+    name:'vay mua laptop',
+    partnerName: 'Nguyen Van A',
+    type: 'loan_to',
+    totalAmount: 700000,
+    remaining: 700000,
+    createdAt: '2026-02-01',
+  },
+  {
+    id: 'debt_002', // Gốc là khoản cho bạn A vay
+    name:'no danh cau long',
+    partnerName: 'Tran Thi B',
+    type: 'loan_to',
+    totalAmount: 1500000, // 1.000.000 (cũ) + 500.000 (mượn thêm)
+    remaining: 1100000,   // Sau khi A trả 400k và mượn thêm 500k
+    createdAt: '2026-02-01',
+  },
+  {
+    id: 'debt_005',
+    name:'vay tra no',
+    partnerName: 'Old Sister',
+    type: 'loan_from',
+    totalAmount: 2000000,
+    remaining: 1000000,
+    createdAt: '2026-02-12',
+  },
+]
 
 export const mockDebtTransactions: IDebtTransaction[] = [
   // Giao dịch cho Bạn B
