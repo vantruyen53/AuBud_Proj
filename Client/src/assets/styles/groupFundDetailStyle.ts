@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 19,
     fontWeight: '900',
     color: '#1E293B',
     letterSpacing: -0.5,
@@ -59,15 +59,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   balanceLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#475569',
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   balanceAmount: {
-    fontSize: 34,
-    fontWeight: '900',
+    fontSize: 19,
+    fontWeight: '800',
     color: '#1E293B',
     letterSpacing: -1,
     marginBottom: 16,

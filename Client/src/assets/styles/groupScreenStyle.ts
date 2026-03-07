@@ -31,9 +31,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(36, 35, 35, 0.85)',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
@@ -144,14 +144,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   balanceLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#94A3B8',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   fundBalance: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1E293B',
   },
