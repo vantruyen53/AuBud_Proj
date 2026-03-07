@@ -75,6 +75,26 @@ export interface IGroupFund {
   members: number,
 }
 
+export interface IGroupMember {
+  id: string;
+  fundId: string;
+  name: string;
+  email: string;
+  avatar?: string; // emoji hoặc URL
+  role: 'admin' | 'member';
+  joinedAt: string;
+}
+
+export interface IGroupTransaction {
+  id: string;
+  fundId: string;
+  type: 'contribute' | 'withdraw';
+  amount: number;
+  memberName: string;
+  date: string;
+  note?: string;
+}
+
 export interface IStatisticDate{
   id: string,
   date:string,

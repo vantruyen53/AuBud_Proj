@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import GroupScreen from '../app/tabs/detailStack/groupScreen';
+import GroupFundDetailScreen from '../app/tabs/detailStack/groupFundDetail';
 import HistoryScreen from '../app/tabs/detailStack/HistoryScreen';
 import AddTransactionScreen from '../app/tabs/detailStack/addTransaction';
 import LayoutTabs from './_layoutTabs';
@@ -13,6 +14,7 @@ export default function LayoutDetailtack() {
     <Stack.Navigator>
         <Stack.Screen options={{headerShown:false}} name='main' component={LayoutTabs}/>
         <Stack.Screen options={{headerShown:false}} name='group' component={GroupScreen}/>
+        <Stack.Screen options={{headerShown:false}} name='groupFundDetail' component={GroupFundDetailScreen}/>
         <Stack.Screen options={{headerShown:false}} name='history' component={HistoryScreen}/>
         <Stack.Screen options={{headerShown:false}} name='addTransaction' component={AddTransactionScreen}/>
         <Stack.Screen options={{headerShown:false}} name='allCategory' component={AllCategory}/>

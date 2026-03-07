@@ -576,3 +576,58 @@ export function ModalBudget({visible,onPressClose, onPressSave, nav,selectedCate
   )
 }
 
+
+export function ModalCreateFund({ isVisible, onClose, onSave }: any) {
+  const [fundName, setFundName] = useState('');
+
+  return (
+    <Modal
+      visible={isVisible}
+      animationType="fade"
+      transparent={true}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Tạo Quỹ Mới</Text>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialIcons name="close" size={24} color="#1E293B" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalForm}>
+            <Text style={styles.inputLabel}>Tên Quỹ</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="VD: Quỹ mua xe..."
+              value={fundName}
+              onChangeText={setFundName}
+            />
+          </View>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={[styles.saveBtn, { backgroundColor: '#F1F5F9' }]} 
+              onPress={onClose}
+            >
+              <Text style={[styles.saveBtnText, { color: '#1E293B' }]}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.saveBtn} 
+              onPress={() => {
+                onSave(fundName);
+                onClose();
+                setFundName('');
+              }}
+            >
+              <Text style={styles.saveBtnText}>Tạo Quỹ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
