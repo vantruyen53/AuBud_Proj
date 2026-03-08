@@ -37,6 +37,7 @@ import {
   IDateState,ICategory,
 } from "@/src/models/interface/Entities";
 import { extractTransaction } from "@/src/utils/helper";
+import { toInitialFormatCurrency } from "@/src/utils/format";
 import {
   DebtTransactionDTO,
   SavingTransactionDTO,
@@ -49,11 +50,13 @@ import { TransactionApp } from "@/src/store/application/TransactionApp";
 import { WalletApp } from "@/src/store/application/WalletApp";
 import { CategoryApp } from "@/src/store/application/CategoryApp";
 
-export default function AddTransactionScreen() {
+export default function AddTransactionScreen({route}:any) {
   const navigation = useNavigation<HomeStackNavProp>();
   const year = new Date().getFullYear();
   const month = new Date().getMonth() + 1;
   const day = new Date().getDate();
+
+  const {hanldeType, payLoad}= route.params;
 
   const { id, accessToken } = useProvider();
   const walletApp = new WalletApp({ id: id, accessToken: accessToken });
@@ -66,9 +69,8 @@ export default function AddTransactionScreen() {
   const [debts, setDebts] = useState<IDebt[]>([]);
 
   //HANLDE
-  const [actionType, setActionType] = useState<
-    "Income" | "Sending" | "Debt" | "Saving" | "Convert"
-  >("Sending");
+  const [actionType, setActionType] = useState<"Income" | "Sending" | "Debt" | "Saving" | "Convert">(
+    payLoad?.type==='income'?"Income":"Sending");
   const [selectedCategory, setSelectedCategory] = useState<CategoryDTO>({
     id: "",
     name: "",
@@ -76,10 +78,36 @@ export default function AddTransactionScreen() {
     iconName: "",
     iconColor: "",
   });
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  const [detailCat, setDetailCat] = useState("");
-  const [note, setNote]=useState('');
-  const [specificTime, setSpecificTime] = useState<IDateState>({y: year.toString(),m: month.toString(),d: day.toString(),});
+  const [formData, setFormData] = useState<Record<string, string>>(() => ({
+    id:payLoad?.id ?? '',
+    amount: payLoad?.amount?.toString() ?? '',
+    title: payLoad?.title ?? '',
+    categoryId: payLoad?.category?.id ?? '',
+    walletId: payLoad?.walletId ?? '',
+    note: payLoad?.note ?? '',
+    date: payLoad?.date ?? `${year}-${month}-${day}`,
+    type: payLoad?.type ?? actionType,
+    walletName:payLoad?.wallet ??'',
+    budgetId:payLoad?.budgetId ??'',
+    userId:payLoad?.userId ??'',
+    status:payLoad?.status ??'completed',
+  }));
+  const [specificTime, setSpecificTime] = useState<IDateState>(() => {
+    if (payLoad?.date) {
+      const d = new Date(payLoad.date); 
+      return {
+        y: d.getFullYear().toString(),
+        m: (d.getMonth() + 1).toString(),
+        d: d.getDate().toString(),
+      };
+    }
+    // Không có payLoad thì dùng ngày hiện tại
+    return {
+      y: year.toString(),
+      m: month.toString(),
+      d: day.toString(),
+    };
+  });
   const [modalTarget, setModalTarget] = useState<"primary" | "convert_to">("primary",);
 
   const [listSending, setListSending] = useState<ICategory[]>([]);
@@ -87,9 +115,13 @@ export default function AddTransactionScreen() {
 
   //SELETED DATA
   const [debtSelected, setDebtSelected] = useState<{partnerName:string, remaining:number}>({partnerName:"", remaining:0});
-  const [walletSelected, setWalletSelected] = useState<{walletName:string, balance:number}>({walletName:"", balance:0});
+  const [walletSelected, setWalletSelected] = useState<{walletId:string,walletName:string, balance:number}>(
+    {walletId:payLoad?.walletId??'',walletName:payLoad?.walletId??'', balance:0});
   const [savingSelected, setSavingSelected] = useState<{savingName:string, balance:number}>({savingName:"", balance:0});
   const [walletTo, setWalletTo] = useState<{walletName:string, balance:number}>({walletName:"", balance:0});
+  //UPDATE
+  const [oldWallet, setOldWallet] = useState<{oldWalletId:string,oldWalletName:string, oldBalance:number}>(
+    {oldWalletId:payLoad?.walletId??'',oldWalletName:payLoad?.walletId??'', oldBalance:0});
 
   //MODAL VIEW
   const [isOpenWallets, setIsOpenWallets] = useState(false);
@@ -99,7 +131,7 @@ export default function AddTransactionScreen() {
   const [isOpenSaving, setIsOpenSaving] = useState(false);
   const [isOpenCatNameInput, setIsOpenCatNameInput] = useState(false);
 
-  const createdAt = toDateTimeFormat(
+  const handleCreatedAt = toDateTimeFormat(
     specificTime.y,
     specificTime.m,
     specificTime.d,
@@ -108,7 +140,7 @@ export default function AddTransactionScreen() {
   useEffect(() => {
     const fetchData = async () => {
       const [walletData, categoryData]= await Promise.all([
-        await walletApp.loadWalletScreenData(),
+        await walletApp.loadWalletScreenData(false),
         await categoryApp.getSuggestedCategory(),
       ])
       if (walletData && categoryData) {
@@ -120,7 +152,7 @@ export default function AddTransactionScreen() {
       }
     };
     fetchData();
-    setFormData({ ...formData, createdAt: createdAt });
+    setFormData({ ...formData, createdAt: handleCreatedAt });
   }, []);
 
   const categories =actionType === "Sending"? listSending:listIncome;
@@ -133,59 +165,85 @@ export default function AddTransactionScreen() {
     return cleanNumber.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
+  const hanlderFilterDebts = useMemo(()=>{
+    if(formData.debtType==="repay_to"){
+      return debts.filter(d=>d.type==='loan_from')
+    }else{
+      return debts.filter(d=>d.type==='loan_to')
+    }
+  }, [formData.debtType, ])
+
   const clearForm = () => {
     setFormData({});
-    setDetailCat("");
     setSpecificTime({y: year.toString(),m: month.toString(),d: day.toString(),});
-    setNote('');
     setModalTarget("primary");
     setWalletTo({walletName:"", balance:0});
     setSavingSelected({savingName:"", balance:0});
-    setWalletSelected({walletName:"", balance:0});
+    setWalletSelected({walletId:'',walletName:"", balance:0});
     setDebtSelected({partnerName:"", remaining:0});
   };
 
   const handleSave = async () => {
-    formData["createdAt"] = createdAt;
-    const e = extractTransaction(actionType, formData, id);
-    if (e)
-      try {
-        if (actionType === "Sending" || actionType === "Income") {
-          const payLoad = e as CreateTransactionDTO;
-          const result = await tractionApp.addTransaction(payLoad, walletSelected.balance);
-          if (result) clearForm();
-        } 
-        else if (actionType === "Debt" || actionType === "Saving") {
-          const payLoad = e as DebtTransactionDTO | SavingTransactionDTO;
-          const remaingOrBalance = actionType === "Debt"?debtSelected.remaining:savingSelected.balance;
-          const result = await walletApp.addWalletTransaction(
-            payLoad,walletSelected.balance,remaingOrBalance
-          );
-          if (result) clearForm();
-        } 
-        else {
-          const payLoad = e as ConvertDTO;
-          const result = await walletApp.convertBalance(payLoad, walletSelected.balance, walletTo.balance);
-          if (result) clearForm();
+    if(hanldeType==="edit"){
+      setFormData({...formData, createdAt:handleCreatedAt})
+      const result = await tractionApp.updateTransaction(formData, oldWallet, 
+        {newWalletId:walletSelected.walletId, newBalance:walletSelected.balance-parseInt(formData.amount)}
+      )
+      if (result){
+        clearForm();
+        navigation.goBack();
+      };
+    }else{
+      formData["createdAt"] = handleCreatedAt;
+      const e = extractTransaction(actionType, formData, id);
+      if (e)
+        try {
+          if (actionType === "Sending" || actionType === "Income") {
+            const payLoad = e as CreateTransactionDTO;
+            const result = await tractionApp.addTransaction(payLoad, walletSelected.balance);
+            if (result) clearForm();
+          } 
+          else if (actionType === "Debt" || actionType === "Saving") {
+            const payLoad = e as DebtTransactionDTO | SavingTransactionDTO;
+            const remaingOrBalance = actionType === "Debt"?debtSelected.remaining:savingSelected.balance;
+            const result = await walletApp.addWalletTransaction(
+              payLoad,walletSelected.balance,remaingOrBalance
+            );
+            if (result) clearForm();
+          } 
+          else {
+            const payLoad = e as ConvertDTO;
+            const result = await walletApp.convertBalance(payLoad, walletSelected.balance, walletTo.balance);
+            if (result) clearForm();
+          }
+        } catch (err) {
+          Alert.alert("Error", `Something went wrong ${err}`);
         }
-      } catch (err) {
-        Alert.alert("Error", `Something went wrong ${err}`);
-      }
-    else Alert.alert("Error", "All field required");
+      else Alert.alert("Error", "All field required");
+    }
   };
+
+  //LOAD DATA FOR EDITTING
+  payLoad&&useEffect(()=>{
+    const wallet = wallets.find(w => w.id===payLoad?.walletId)
+    const backupBalance = wallet?.balance+payLoad?.amount;
+
+    setWalletSelected({walletId:wallet?.id as string, balance:backupBalance, walletName:wallet?.name as string})
+    setOldWallet({oldWalletId:wallet?.id as string, oldBalance:backupBalance, oldWalletName:wallet?.name as string})
+  }, [payLoad,wallets])
 
   const renderSenInForm = () => (
     <View style={styles.form}>
       <View style={styles.detailCat}>
         <Text
-          style={detailCat ? styles.detailCatText : styles.placeHolderWallet}
+          style={formData.title ? styles.detailCatText : styles.placeHolderWallet}
         >
-          {detailCat ? detailCat : "Detail transaction name"}
+          {formData.title ? formData.title : "Detail transaction name"}
         </Text>
-        {detailCat && (
+        {formData.title && (
           <TouchableOpacity
             style={styles.detailCatClear}
-            onPress={() => setDetailCat("")}
+            onPress={() => setFormData({...formData, title:""})}
           >
             <MaterialIcons name="close" />
           </TouchableOpacity>
@@ -503,7 +561,7 @@ export default function AddTransactionScreen() {
               placeholder="Example 300.000"
               style={styles.amountInput}
               keyboardType="numeric"
-              onChangeText={(val) => setFormData({ ...formData, amount: val })}
+              onChangeText={(val) => setFormData({ ...formData, amount: toInitialFormatCurrency(val) })}
               value={convertFormat(formData?.amount ?? "")}
               placeholderTextColor="#c9c9c9"
             />
@@ -530,12 +588,12 @@ export default function AddTransactionScreen() {
                 </View>
                 <Text
                   style={
-                    walletSelected.walletName
+                    formData.walletName
                       ? styles.walletName
                       : styles.placeHolderWallet
                   }
                 >
-                  {walletSelected.walletName ? walletSelected.walletName : "Select a wallet"}
+                  {formData.walletName ? formData.walletName : "Select a wallet"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -568,8 +626,8 @@ export default function AddTransactionScreen() {
                 placeholder="Note for your transaction"
                 style={{ fontWeight: "500", fontSize: 16 }}
                 placeholderTextColor="#ddd"
-                value={note}
-                onChangeText={(val) =>{setNote(val),setFormData({ ...formData, note: val })}}
+                value={formData.note ?? ''}
+                onChangeText={(val) =>{setFormData({ ...formData, note: val })}}
               />
             </View>
             <View></View>
@@ -593,8 +651,8 @@ export default function AddTransactionScreen() {
             }
             onSelected={(id: string, name: string,balance: number) => {
               if (modalTarget === "primary") {
-                setWalletSelected({walletName:name, balance});
-                setFormData({ ...formData, walletId: id });
+                setWalletSelected({walletId:id,walletName:name, balance});
+                setFormData({ ...formData, walletId: id,walletName:name });
               } else {
                 // Kiểm tra tránh chọn trùng ví nguồn
                 if (id === formData.walletId) {
@@ -611,9 +669,10 @@ export default function AddTransactionScreen() {
         )}
         {isOpenCalendar && (
           <Calendar
-            onPress={(year: number, m: number, d: number) =>
+            onPress={(year: number, m: number, d: number) =>{
               handleDateSelect(year, m, d)
-            }
+              setFormData({...formData, createdAt:toDateTimeFormat(year.toString(), m.toString(),d.toString())})
+            }}
             onPressClose={() => setIsOpenCalendar((pre) => !pre)}
             specificTime={specificTime}
           />
@@ -622,18 +681,18 @@ export default function AddTransactionScreen() {
           <TypeDebt
             isSelected={formData?.debtType}
             onSelecte={(type: string) => {
-              (setFormData({ ...formData, debtType: type }),
-                setIsOpenTypeDebts(false));
+              setFormData({ ...formData, debtType: type }),
+              setIsOpenTypeDebts(false);
             }}
           />
         )}
         {isOpenListDebts && (
           <ModalDebts
-            data={debts}
+            data={hanlderFilterDebts}
             onPressClose={() => setIsOpenListDebts(!isOpenListDebts)}
             onSelect={(id: string, partnerName: string, remaining: number) => {
-              (setDebtSelected({partnerName,remaining}),
-                setFormData({ ...formData, debtId: id }));
+              setDebtSelected({partnerName,remaining}),
+                setFormData({ ...formData, debtId: id });
             }}
             debt={formData.debtId}
           />
@@ -653,7 +712,7 @@ export default function AddTransactionScreen() {
           <ModalCategoryName
             cat={selectedCategory}
             onPressClose={() => setIsOpenCatNameInput(false)}
-            setDetailCat={(title:string)=>{setDetailCat(title), setFormData({...formData, title:title})}}
+            setDetailCat={(title:string)=>{setFormData({...formData, title:title})}}
           />
         )}
       </KeyboardAvoidingView>

@@ -20,6 +20,7 @@ export async function postLogin( payload: LoginPayload): Promise<LoginResult> {
     });
 
     const data = await res.json();
+
         return {
             ...data
         };
@@ -33,6 +34,7 @@ export async function loginService(payload: LoginPayload): Promise<any> {
     try {
         const result = await postLogin(payload);
         console.log('====1. postLogin result.status:', result.status);
+        console.log('====2. postLogin result.email:', result.email);
         console.log('====2. result.salt:', result.salt ? 'có' : 'NULL');
         console.log('====3. result.encryptedSecretKey_user:', result.encryptedSecretKey_user ? 'có' : 'NULL');
 
@@ -63,6 +65,7 @@ export async function loginService(payload: LoginPayload): Promise<any> {
         return {
             status:       result.status,
             message:      result.message,
+            email:        result.email,
             accessToken:  result.accessToken,
             refreshToken: result.refreshToken,
         };

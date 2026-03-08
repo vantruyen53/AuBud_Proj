@@ -3,6 +3,13 @@ import { Colors} from "@/src/constants/theme";
 
 const styles = StyleSheet.create({
     /* Modal Styles */
+    noTransactionsText: {
+      fontSize: 14,
+      color: Colors.light.placeholder,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      marginTop: 20,
+    },
       modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -17,10 +24,10 @@ const styles = StyleSheet.create({
         maxHeight: '90%',
       },
       modalHeader: {
-        flexDirection: 'row',
+        flexDirection:'row', 
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 24,
+        alignItems:'center',
+        marginBottom:10
       },
       modalTitle: {
         fontSize: 20,

@@ -1,24 +1,37 @@
-import {ScrollView,StyleSheet,Text,TouchableOpacity,View, ViewStyle, TextStyle} from "react-native";
-import { useState } from "react";
+import {ScrollView,StyleSheet,Text,TouchableOpacity,View, ViewStyle, TextStyle, Alert} from "react-native";
+import { useEffect, useMemo, useState,useCallback } from "react";
 import mockBudget from '@/src/store/seed/budget';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { MaterialIcons } from "@react-native-vector-icons/material-icons";
+
 import {HomeStackNavProp} from '@/src/models/types/RootStackParamList'
 import { Colors, Fonts } from "@/src/constants/theme";
-import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import CategoryPieChart from '@/src/components/pieChart';
 import { formatCurrency } from "@/src/utils/format";
 import { ModalBudget } from "@/src/components/customModal";
-import { ICategory } from "@/src/models/IApp";
+import { BudgetDTO, CategoryDTO } from "@/src/models/interface/DTO";
+import { BudgetApp } from "@/src/store/application/BudgetApp";
+import { useProvider } from "@/src/hooks/useProvider";
+import { Budgets } from "@/src/models/interface/Entities";
 
 export default function BudgetScreen() {
   const navigation = useNavigation<HomeStackNavProp>();
+  const month = new Date().getMonth()+1;
+  const year = new Date().getFullYear();
+  const {id, accessToken}=useProvider()
+  const budgetApp = useMemo(()=>
+    new BudgetApp({id, accessToken}),[id, accessToken]
+  )
 
+
+  const [budgets, setBudget]=useState<Budgets[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [isOpenModalBudget, setIsOpenModalBudget]=useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false)
-  const [target, setTarget] = useState(0)
-  const [selectedCategory, setSelectedCategory] = useState<ICategory>({id:'', name:'',type:'', iconName:'', iconColor:''});
+  const [modalType, setModalType]=useState<'add'|'edit'>('add')
+  const [formData, setFormData] = useState<any>({})
+
+  const [trigger, setTrigger]=useState(0)
 
   const prevMonth = () => {
     setCurrentMonth(
@@ -39,12 +52,77 @@ export default function BudgetScreen() {
   ).getDate();
   const dateRange = `(01/${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${daysInMonth}/${String(currentMonth.getMonth() + 1).padStart(2, "0")})`;
 
+  useFocusEffect(
+    useCallback( ()=>{
+      const fetch = async()=>{
+        const budgets = await budgetApp.getBudgets((currentMonth.getMonth()+1).toString(), currentMonth.getFullYear().toString());
+        if(budgets){
+          setBudget(budgets)
+        }
+      }
+      fetch();
+    }, [currentMonth, trigger])
+  )
+
   // Helper function để lấy màu thanh progress bar
   const getProgressBarColor = (percentage: number) => {
       if (percentage >= 100) return Colors.light.error;
       if (percentage > 80) return Colors.light.warning;
       if(percentage>60) return Colors.light.success;
       return Colors.light.primary; 
+  };
+
+  const currentMonthValue = year * 12 + month; // tháng hiện tại
+  const viewingMonthValue = currentMonth.getFullYear() * 12 + (currentMonth.getMonth() + 1); // tháng đang xem
+
+  const isTooEarly = viewingMonthValue < currentMonthValue;        // trước tháng hiện tại → ẩn nút
+  const isTooFar   = viewingMonthValue > currentMonthValue + 1;    // sau tháng tiếp theo → hiện nhưng alert
+  const canAdd     = !isTooEarly;  
+
+  const showError = (message?: string) => {
+    Alert.alert("Error", message || "Something went wrong. Please try again.");
+  };
+
+  const handleSave = async ()=>{
+    const {categoryId, target} = formData;
+    const payLoad = {target, categoryId, date: monthYear, status: 'active'} as BudgetDTO;
+    
+    const { success, message } = await budgetApp.createBudget(payLoad);
+    if (success) {
+      setIsModalVisible(false);
+      setTrigger(pre => pre + 1);
+    } else {
+      showError(message);
+    }
+  }
+
+  const handleEdit = async () => {
+    const { success, message } = await budgetApp.updateBudget(formData.target, formData.budgetId);
+    if (success) {
+      setIsModalVisible(false);
+      setTrigger(pre => pre + 1);
+    } else {
+      showError(message);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    Alert.alert("Delete", "Are you sure to delete this budget?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const { success, message } = await budgetApp.deleteBudget(id);
+          if (success) {
+            setIsModalVisible(false);
+            setTrigger(pre => pre + 1);
+          } else {
+            showError(message);
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -78,7 +156,7 @@ export default function BudgetScreen() {
           <View style={[styles.card, styles.shadow, styles.gaugeCard]}>
             <View style={styles.gaugeContainer}>
               <CategoryPieChart
-                data={mockBudget}
+                data={budgets}
                 showLabel={false}
                 size={220}
               />
@@ -86,19 +164,28 @@ export default function BudgetScreen() {
           </View>
 
           {/* --- BUDGET CATEGORIES LIST --- */}
-          {mockBudget.map((item)=>{
-            const remaining = item.totalAmount - item.balance;
+
+          {budgets.length<=0?<Text style={styles.noTransactionsText}>No budget in {monthYear}</Text>:
+          budgets.map((item)=>{
+            const remaining = item.target - item.balance;
             const percentage =
-              item.totalAmount > 0
-                ? Math.round((item.balance / item.totalAmount) * 100)
+              item.target > 0
+                ? Math.round((item.balance / item.target) * 100)
                 : 0;
             
             return(
-              <TouchableOpacity key={item.id} style={styles.budgetCard}>
+              <TouchableOpacity key={item.id} style={styles.budgetCard} 
+                onPress={()=>{
+                  setFormData({...formData,budgetId:item.id, target:item.target, categoryName: item.category.name})
+                  setModalType('edit')
+                  setIsModalVisible(true)
+                }}
+                onLongPress={()=>handleDelete(item.id)}  
+                >
                 <View style={styles.budgetCardHeader}>
                   <View style={[styles.categoryIconWrapper, { backgroundColor: `rgba(${item.category.iconColor},0.1)` }]}>
                     <MaterialIcons
-                      name={item.category.iconName}
+                      name={item.category.iconName as any} 
                       size={20}
                       color={`rgb(${item.category.iconColor})`}
                     />
@@ -125,7 +212,7 @@ export default function BudgetScreen() {
                 </View>
                 <View style={styles.budgetCardFooter}>
                   <Text style={styles.budgetLabel}>
-                    {formatCurrency(item.totalAmount, {absolute:true})}
+                    {formatCurrency(item.target, {absolute:true})}
                   </Text>
                   <Text style={styles.percentageText}>{percentage}%</Text>
                   <Text style={styles.spentLabel}>
@@ -137,35 +224,46 @@ export default function BudgetScreen() {
           })}
 
           {/* --- ADD BUDGET BUTTON --- */}
-          <TouchableOpacity style={styles.addBudgetBtn}
-            onPress={() => {
-              setIsOpenModalBudget(true)
-              setIsModalVisible(true)
-            }}
-          >
-            <MaterialIcons name="add-circle" size={24} color={Colors.light.primary} />
-            <Text style={styles.addBudgetText}>Add new budget</Text>
-          </TouchableOpacity>
+          {canAdd && (
+            <TouchableOpacity
+              style={styles.addBudgetBtn}
+              onPress={() => {
+                if (isTooFar) {
+                  Alert.alert(
+                    "Warning",
+                    "Bạn không thể lập ngân sách cho thời gian quá sớm!",[
+                    { text: "Got it", style: "cancel" }
+                  ]);
+                  return;
+                }
+                setIsModalVisible(true);
+                setModalType('add');
+              }}
+            >
+              <MaterialIcons name="add-circle" size={24} color={Colors.light.primary} />
+              <Text style={styles.addBudgetText}>Add new budget</Text>
+            </TouchableOpacity>
+          )}
 
         </ScrollView>
-        {isOpenModalBudget && 
           <ModalBudget 
             visible={isModalVisible}
-            onPressClose={()=>setIsOpenModalBudget(false)}
-            onPressSave={()=>setIsOpenModalBudget(false)}
-            selectedCategory={selectedCategory}
-            target={target}
-            onChangeText={(target:number)=>setTarget(target)}
+            onPressClose={()=>{setIsModalVisible(false),setFormData({})}}
+            onPressSave={()=>handleSave()}
+            onPressEdit={()=>handleEdit()}
+            formData={formData}
+            onChangeText={(target:number)=>setFormData({...formData, target})}
             nav={()=>{
               setIsModalVisible(false)
               navigation.navigate('allCategory',{
-                  setSelectedCategory: (categorie: ICategory) =>
-                    setSelectedCategory(categorie),
+                  setSelectedCategory: (categorie: CategoryDTO) =>
+                    setFormData({...formData,categoryId: categorie.id, ...categorie}),
                   setIsOpenCatNameInput:(status:boolean)=>
                     setIsModalVisible(status)
             })}}
+            type={modalType}
           />
-        }
+        
       </SafeAreaView>
     </View>
   )
@@ -251,6 +349,13 @@ const styles = StyleSheet.create({
     height: 220,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  noTransactionsText: {
+    fontSize: 14,
+    color: Colors.light.placeholder,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 20,
   },
 
   /* Budget Card */

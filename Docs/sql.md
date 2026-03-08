@@ -57,8 +57,8 @@ CREATE TABLE IF NOT EXISTS `budget` (
 `category_id` VARCHAR(255) NOT NULL,
 `current_spent` DECIMAL(15,2) NOT NULL DEFAULT 0,
 `amount_limit` DECIMAL(15,2) NOT NULL,
-`year_month` DATE NOT NULL, -- Đã sửa dấu gạch ngang
-`status` VARCHAR(255) NOT NULL,
+`year_month` DATE NOT NULL,
+`status` VARCHAR(255) NOT NULL, 
 `last_access` DATETIME NOT NULL
 );
 
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS `traffic` (
 
 CREATE TABLE IF NOT EXISTS `goal_price` (
 `id` VARCHAR(255) NOT NULL PRIMARY KEY,
-`type` VARCHAR(255) NOT NULL,
+`type` VARCHAR(255) NOT NULL, --gold branch
 `buy_price` BIGINT NOT NULL,
 `sell_price` BIGINT NOT NULL,
 `datetime` DATETIME NOT NULL
@@ -185,8 +185,8 @@ CREATE TABLE IF NOT EXISTS `forign_currency` (
 `id` VARCHAR(255) NOT NULL PRIMARY KEY,
 `country` VARCHAR(255) NOT NULL,
 `foreign_currency` VARCHAR(255) NOT NULL,
-`vnd` VARCHAR(255) NOT NULL,
-`updated_at` DATETIME NOT NULL -- Đã sửa tên cột
+`vnd` VARCHAR(255) NOT NULL, 
+`updated_at` DATETIME NOT NULL 
 );
 
 CREATE TABLE IF NOT EXISTS `convert_history` (

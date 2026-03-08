@@ -87,10 +87,11 @@ export default function HomeScreen() {
     const dayStr = d < 10 ? `0${d}` : `${d}`;
     const dateStr = `${y}-${monthStr}-${dayStr}`;
     return allTransactions.filter((t) => {
-      const transactionDate = t.date?.split('T')[0];
+      const transactionDate = t.date?.split(' ')[0];
       return transactionDate === dateStr;
     });
   }, [allTransactions]);
+
 
   // 3. LỌC THEO TAB (Sending/Income)
   const flattenedData = useMemo(() => {
@@ -106,13 +107,11 @@ export default function HomeScreen() {
   }, [transactionsToday]);
 
   // 5. Handle action
-  const handleEdit = (tx: ITransactionItem, rowMap: any) => {
-    if (rowMap[tx.id]) {
-      rowMap[tx.id].closeRow();
-    }
-    setEditingTx(tx);
-    setFormData(tx);
-    setModalVisible(true);
+  const handleEdit = (tx: ITransactionItem) => {
+    navigation.navigate("addTransaction",{
+      hanldeType:'edit',
+      payLoad: tx,
+    })
   };
   const handleDelete = (payLoad: ITransactionItem) => {
     Alert.alert(
@@ -133,6 +132,7 @@ export default function HomeScreen() {
     );
   };
   const handleSave = () => {};
+  const handleDetail=(item:ITransactionItem)=>{}
 
   const renderHeader = () => (
     <>
@@ -381,7 +381,7 @@ export default function HomeScreen() {
               keyExtractor={(item: ITransactionItem) => item.id}
               ListHeaderComponent={renderHeader}
               showsVerticalScrollIndicator={false}
-              rightOpenValue={-80}
+              rightOpenValue={-160}
               disableRightSwipe={true}
               swipeToOpenPercent={40}
               renderItem={(data, rowMap) => (
@@ -394,20 +394,28 @@ export default function HomeScreen() {
                   iconColor={data.item.category.iconColor}
                   type={data.item.type}
                   showData={isShowData}
-                  handleEdit={() => {
-                    handleEdit(data.item, rowMap);
-                  }}
+                  handleDetail={() => {handleDetail(data.item);}}
                 />
               )}
               renderHiddenItem={(data, rowMap) => (
-                <TouchableOpacity
-                  onPress={() => handleDelete(data.item)}
-                  style={styles.deleteAction}
-                >
-                  <Animated.View style={styles.deleteActionContent}>
-                    <Text style={styles.deleteActionText}>Delete</Text>
-                  </Animated.View>
-                </TouchableOpacity>
+                <View style={styles.hiddenContainer}>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(data.item)}
+                    style={[styles.deleteAction, {backgroundColor: '#EF4444'}]}
+                  >
+                    <Animated.View style={styles.deleteActionContent}>
+                      <Text style={styles.deleteActionText}>Delete</Text>
+                    </Animated.View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleEdit(data.item)}
+                    style={[styles.deleteAction, {backgroundColor:"#37bcff"}]}
+                  >
+                    <Animated.View style={styles.deleteActionContent}>
+                      <Text style={styles.deleteActionText}>Edit</Text>
+                    </Animated.View>
+                  </TouchableOpacity>
+                </View>
               )}
             />
           ) : (
@@ -420,7 +428,7 @@ export default function HomeScreen() {
           <FloatAddBtn
             name="edit"
             size="24"
-            navigation={() => navigation.navigate("addTransaction")}
+            navigation={() => navigation.navigate("addTransaction",{})}
           />
 
           {/* Edit Transaction Modal */}

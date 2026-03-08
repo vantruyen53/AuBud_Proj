@@ -138,10 +138,10 @@ export default function AllCategory({route}:any) {
                 key={item.id}
                 style={styles.catItem}
                 onPress={() => {
-                  setSelectedCat({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor})
-                  setSelectedCategory({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor})
+                  setSelectedCat({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor}),
+                  setSelectedCategory&&setSelectedCategory({id:item.id, name:item.name, type:item.type, iconName:item.iconName, iconColor:item.iconColor}),
                   setIsOpenCatNameInput&&setIsOpenCatNameInput(true)
-                  navigation.goBack();
+                  setSelectedCategory&&navigation.goBack();
                 }}
             >
                 <View

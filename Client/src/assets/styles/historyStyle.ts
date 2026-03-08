@@ -50,7 +50,8 @@ const styles = StyleSheet.create({
     },
     contentSearch:{
         flex:1,
-        paddingVertical:5,
+        padding:5,
+        fontSize: 15,
     },
     clearFrom:{
         width:20,
@@ -230,16 +231,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
-//   Delete transactio item 
+//   Delete& edit transaction item 
+  hiddenContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+    },
     deleteAction: {
-      backgroundColor: '#EF4444',
       justifyContent: 'center',
       alignItems: 'center',
       width: 80,
       height: '85%',
       alignSelf: 'flex-end',
       borderRadius: 20,
-      marginRight: 10,
+      marginRight: 5,
       marginBottom: 12,
     },
   deleteActionContent: {

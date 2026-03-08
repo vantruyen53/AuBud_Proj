@@ -1,21 +1,22 @@
-import { CreateTransactionDTO, WalletDTO, CreateDebtDTO, CreateSavingDTO, CategoryDTO,
-  CreateGroupFundDTO, ConvertDTO, DebtTransactionDTO, SavingTransactionDTO,EncryptedDTO, } from "./DTO";
+import {  CategoryDTO,EncryptedDTO, } from "./DTO";
 import { ITransactionItem , IWallet, IDebt, IDebtHistory, IGroupFund, 
-  IGroupFundHistory, ISaving, ISavingHistory, } from "./Entities";
+  IGroupFundHistory, ISaving, ISavingHistory, IMonthlySummary, BudgetEntitiy, IMarketDataResponse} from "./Entities";
 
 
 export interface ITransactionService {
   addTransaction(transaction: EncryptedDTO, newWatlletBalance: string): Promise<boolean>;
-  updateTransaction(transaction: EncryptedDTO, newWatlletBalance: number): Promise<boolean>;
+  updateTransaction(transaction: EncryptedDTO, oldWallet:EncryptedDTO, newWallet:EncryptedDTO): Promise<boolean>;
   deleteTransaction(transactionId: string, newBackupBalance:string): Promise<boolean>;
   getByDayService(day: number, month: number, year: number): Promise<ITransactionItem[] | null>;
   getByMonthService(month: number, year: number): Promise<ITransactionItem[] | null>;
   getByYearService(year: number): Promise<ITransactionItem[] | null>;
   getByCategoryService(categoryId: string): Promise<ITransactionItem[] | null>;
+  getMonthlySummary(day:number, month:number, year:number):
+    Promise<{ currentPeriod: IMonthlySummary[]; lastPeriod: IMonthlySummary[]}>
 }
 
 export interface IWalleetService {
-  addWallet(wallet: EncryptedDTO): Promise<boolean>;
+  addWallet(wallet: EncryptedDTO, encryptedNewBalance?:string): Promise<boolean>;
   updateWallet(wallet: EncryptedDTO): Promise<boolean>;
   deleteWallet(walletId: string, actionType: 'wallet' | 'saving' | 'debt'): Promise<boolean>;
   getAllWallets(): Promise<{
@@ -28,7 +29,9 @@ export interface IWalleetService {
 
   //khoan triển khai 
   addWalletTransaction(walleTransaction:EncryptedDTO, encryptedNewBalance: string, encryptedNewRemaingOrBalance:string): Promise<boolean>;
-  getAllWalletHistory():Promise<ISavingHistory[]| IDebtHistory[] | null>
+  getAllWalletHistory(walletId:string, walletType:string):Promise<ISavingHistory[]| IDebtHistory[] | null>
+  deleteWalletHistoryItem(foreignId:string, actionType:string, wTransactionId:string, 
+    newBalanceHashed:string,walletId:string, encrytedNewWalletBalace:string): Promise<boolean>
   convertBalance(payLoad: EncryptedDTO, fromWalletNewBalance:string, toWalletNewBalance:string): Promise<boolean>;
 }
 
@@ -38,4 +41,15 @@ export interface ICategoryService{
   addCategory(category:CategoryDTO): Promise<boolean>;
   updateCategory(category:CategoryDTO): Promise<boolean>;
   deleteCategory(categoryId:string,): Promise<boolean>;
+}
+
+export interface IBudgetService {
+  getBudgets(month: string, year: string): Promise<BudgetEntitiy[]>;
+  addNewBudget(payLoad: EncryptedDTO): Promise<{success: boolean, message?: string}>;
+  updateBudget(budgetId: string, newTarget: string): Promise<{success: boolean, message?: string}>;
+  deleteBudget(budgetId: string): Promise<{success: boolean, message?: string}>;
+}
+
+export interface IMarketService {
+  getMarketData(): Promise<IMarketDataResponse | null>;
 }

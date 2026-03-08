@@ -5,9 +5,10 @@ type AppContextType = {
     refreshToken: string,
     id: string,
     userName: string,
+    email:string
     role: string,
     isShowData: boolean,
-    signIn: (accessToken: string, refreshToken: string) => Promise<void>;
+    signIn: (accessToken: string, refreshToken: string, email:string) => Promise<void>;
     signOut: ()=>Promise<void>
     toggleShowData: () => void
 }

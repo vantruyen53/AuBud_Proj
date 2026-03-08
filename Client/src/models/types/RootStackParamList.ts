@@ -1,5 +1,5 @@
 import { NavigationProp } from '@react-navigation/native';
-import { ICategory } from '../interface/Entities';
+import { ICategory,IWallet,ISaving,IDebt,ITransactionItem } from '../interface/Entities';
 
 export type RootStackParamList = {
   LoginScreen: undefined;
@@ -18,11 +18,14 @@ type TabsStackParamList = {
   home: undefined;
   group: undefined;
   history: undefined;
-  addTransaction: undefined;
+  addTransaction: {
+    hanldeType?:"edit",
+    payLoad?:IWallet|ISaving|IDebt|ITransactionItem,
+  };
   allCategory: {
         typePar?: "Sending" | "Income" | "Debt" | "Saving" | "Convert",
         setIsOpenCatNameInput?: (status: boolean) => void,
-        setSelectedCategory: (category: ICategory) => void,
+        setSelectedCategory?: (category: ICategory) => void,
     };
   budget:undefined,
   notifacation:undefined,

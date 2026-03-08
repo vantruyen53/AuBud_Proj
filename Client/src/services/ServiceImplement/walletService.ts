@@ -3,69 +3,63 @@ import { UserDTO, DebtTransactionDTO,SavingTransactionDTO,ConvertDTO, EncryptedD
 import { IWallet, ServiceResponse, IDebt, IDebtHistory, IGroupFund, ISaving, ISavingHistory} from "@/src/models/interface/Entities";
 import axios from 'axios'
 import { IWalleetService } from "@/src/models/interface/ServiceInterface";
-
-
+import { apiFetch } from "../auth/apiService";
 
 export class WalletService implements IWalleetService {
     constructor(private user: UserDTO) {}
 
-    private async _multiRequest(method:"POST" | "PUT" | "DELETE",data?: any, actionType?:string, walletId?: string, isTransaction?:boolean):Promise<ServiceResponse<any>>{
-        try{
-            const queryObj: any = { userId: this.user.id };
-            const queryString = "?" + new URLSearchParams(queryObj).toString();
+    private async _multiRequest(method: "POST" | "PUT" | "DELETE", data?: any, actionType?: string, walletId?: string, isTransaction?: boolean): Promise<ServiceResponse<any>> {
+        try {
+            const queryString = "?" + new URLSearchParams({ userId: this.user.id }).toString();
 
-            let url = `${API_URL}/wallet`;
+            let url = `/aubud/api/v1/wallet`;
             if (actionType) url += `/${actionType}`;
-            if(isTransaction) url+='/transaction'
+            if (isTransaction) url += '/transaction';
             if (walletId) url += `/${walletId}`;
             url += queryString;
 
-            console.log(url)
+            console.log(url);
+            console.log({ ...data });
 
-            const res = await axios(url,{
-                method: method,
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.user.accessToken}` 
-                },
-                data: data ? { ...data, userId: this.user.id } : undefined
-            })
-            if (res.status !== 200) {
-                const errorData = res.statusText;
-                console.log(errorData)
-                throw new Error(errorData || "Something went wrong");
+            // đổi axios → apiFetch, bỏ headers
+            const res = await apiFetch(url, {
+                method,
+                body: data ? JSON.stringify({ ...data, userId: this.user.id }) : undefined
+            });
+
+            if (!res.ok) {
+                throw new Error(res.statusText || "Something went wrong");
             }
+
+            const json = await res.json();
             return {
-                status:true,
-                data:await res.data,
-                message:"Successfully"
-            } ;
+                status: json.status,
+                data: json,
+                message: "Successfully"
+            };
         } catch (error: any) {
             console.log(`Error in ${method} request for ${actionType}:`, error);
-            return {
-                status:false,
-                data: null,
-                message: error.message || "Network Error"
-            };
+            return { status: false, data: null, message: error.message || "Network Error" };
         }
     }
 
-    private async _getRequest(endpoint: string, params?: object): Promise<any>{
-        try{
+    private async _getRequest(endpoint: string, params?: object, actionType?: string, walletId?: string): Promise<any> {
+        try {
             const queryObj: any = { ...params, userId: this.user.id };
             const queryString = "?" + new URLSearchParams(queryObj).toString();
 
-            const res = await axios.get(`${API_URL}/wallet/${endpoint}${queryString}`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.user.accessToken}`
-                }
-            });
+            let url = `/aubud/api/v1/wallet`;
+            if (endpoint === "history") url += `/${actionType}/${walletId}`;
+            url += `/${endpoint}${queryString}`;
 
-            if (res.status !== 200) {
+            // đổi axios → apiFetch, bỏ headers
+            const res = await apiFetch(url);
+
+            if (!res.ok) {
                 throw new Error(res.statusText || "Something went wrong");
             }
-            return res.data;
+
+            return await res.json();
         } catch (error) {
             console.error("Network error:", error);
             return null;
@@ -74,20 +68,24 @@ export class WalletService implements IWalleetService {
 
     // TRIỂN KHAI CÁC HÀM INTERFACE
 
-    async addWallet(walletHash: EncryptedDTO): Promise<boolean> {
+    async addWallet(walletHash: EncryptedDTO, encryptedNewBalance?:string): Promise<boolean> {
         if (!walletHash) return false;
-        const res = await this._multiRequest("POST", walletHash, walletHash.actionType);
+        if(encryptedNewBalance){
+            const res = await this._multiRequest("POST", {walletHash, encryptedNewBalance}, walletHash.actionType);
+            return res.status;
+        }
+
+        const res = await this._multiRequest("POST", {walletHash}, walletHash.actionType);
         return res.status;
     }
-
     async updateWallet(walletHash: EncryptedDTO): Promise<boolean> {
         if (!walletHash) return false;
-        const res = await this._multiRequest("PUT", walletHash, walletHash.actionType, walletHash.id);
+        const res = await this._multiRequest("PUT", {walletHash}, walletHash.actionType, walletHash.id);
         return res.status;
     }
-
     async deleteWallet(walletId: string, actionType: 'wallet' | 'saving' | 'debt'): Promise<boolean> {
         const res = await this._multiRequest("DELETE", undefined, actionType, walletId);
+        console.log(actionType, walletId);
         return res.status;
     }
     async getAllWallets(): Promise<{
@@ -109,9 +107,16 @@ export class WalletService implements IWalleetService {
         const res = await this._multiRequest("POST", data, walletTransaction.actionType, "", true);
         return res.status;  
     }
-    async getAllWalletHistory(): Promise<ISavingHistory[] | IDebtHistory[] | null> {
-        // Có thể truyền thêm params để phân loại history nếu cần
-        return await this._getRequest("history");
+    async getAllWalletHistory(walletId:string, actionType:string): Promise<ISavingHistory[] | IDebtHistory[] | null> {
+        return await this._getRequest("history",undefined, actionType,walletId);
+    }
+    async deleteWalletHistoryItem(foreignId:string, actionType:string, wTransactionId:string, 
+        newBalanceHashed:string,paymentWalletId:string, encrytedNewWalletBalace:string): Promise<boolean>{
+
+        const res = await this._multiRequest('DELETE', {wTransactionId, newBalanceHashed, paymentWalletId, encrytedNewWalletBalace}, actionType, foreignId, true) 
+        console.log('======================================')
+        console.log(res.status)
+        return true
     }
     async convertBalance(payLoad: EncryptedDTO, fromWalletNewBalance:string, toWalletNewBalance:string): Promise<boolean> {
         const data = {...payLoad, fromWalletNewBalance, toWalletNewBalance}

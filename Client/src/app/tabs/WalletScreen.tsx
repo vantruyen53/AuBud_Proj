@@ -5,16 +5,17 @@ import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Eye, EyeOff } from "lucide-react-native";
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { ModalForm } from '@/src/components/customModal';
 import { useNavigation, useFocusEffect  } from "@react-navigation/native";
 
 import { formatCurrency } from "@/src/utils/format";
 import { WalletApp} from '@/src/store/application/WalletApp';
 import { HomeStackNavProp } from "../../models/types/RootStackParamList";
-import { IWallet,ISaving,IDebt,IGroupFund } from "@/src/models/interface/Entities";
+import { IWallet,ISaving,IDebt,IGroupFund, IDebtHistory, ISavingHistory } from "@/src/models/interface/Entities";
 import styles from '@/src/assets/styles/walletStyle';
 import { useProvider } from "@/src/hooks/useProvider";
 import { extractWallet } from '@/src/utils/helper';
+import { ModalForm, ModalWalletHistory, ModalWallet } from '@/src/components/customModal';
+import { CreateDebtDTO } from '@/src/models/interface/DTO';
 
 
 export default function WalletScreen() {
@@ -23,7 +24,9 @@ export default function WalletScreen() {
   const [savings, setSavings] = useState<ISaving[]>([]);
   const [groupFunds, setGroupFunds] = useState<IGroupFund[]>([]);
   const [debts, setDebts] = useState<IDebt[]>([]);
-  //mỗi thao tác CRUD thành công gọi triggerRefresh() đẻe re-render view
+  const [walletHistories, setWalletHistoies]=useState<any[]|null>([])
+
+  //mỗi thao tác CRUD thành công gọi triggerRefresh() để re-render view
   const [refreshKey, setRefreshKey] = useState(0);
   const { isShowData, toggleShowData, id, accessToken } = useProvider();
   const [totalData, setTotalData]=useState<{w:number, s:number, gF:number, lf:number, lt:number, tNW: number}>({
@@ -33,21 +36,23 @@ export default function WalletScreen() {
   // Modal states
   const [isModalVisible, setModalVisible] = useState(false);
   const [isTypeModalVisible, setTypeModalVisible] = useState(false);
+  const [isOpenModalHistory, setIsOpenModalHistory]= useState(false);
+  const [isOpenWalletsForCreateDebt, setIsOpenWalletsForCreateDebt]= useState(false);
   const [modalType, setModalType] = useState<'wallet' | 'saving' | 'group' | 'debt' | null>(null);
 
   //Handle data
   const [formData, setFormData] = useState<any>(null);
-  const [editingItem, setEditingItem] = useState<any>(null);
   const [typeAction, setTypeAction]=useState<'add' | 'edit'>('add')
+  const [historyWallet, setHistoryWallet]=useState<{id:string, balance: number, actionType:string}>({id:'', balance:0, actionType:''})
+  const [walletForCreateDebt, setWalletForCreateDebt]=useState<IWallet>({id:'', balance:0, name:''})
 
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
-  const navigation = useNavigation<HomeStackNavProp>();
   const walletApp = new WalletApp({id:id, accessToken:accessToken})
 
   useFocusEffect(
     useCallback(()=>{
       const fetchData = async ()=>{
-        const result =await walletApp.loadWalletScreenData()
+        const result =await walletApp.loadWalletScreenData(false)
         if(result){
           setWallets(result.rawData.wallets)
           setSavings(result.rawData.savings)
@@ -67,7 +72,7 @@ export default function WalletScreen() {
   const handleDelete = (type: string, walletId: string) => {
     Alert.alert(
       "Delete",
-      "Are you sure to delete this wallet?",
+      "If you delete this wallet, will all transactions from this wallet also be deleted? Please consider this.",
       [
         { text: "Cancal", style: "cancel" },
         { 
@@ -77,7 +82,7 @@ export default function WalletScreen() {
             const result = await walletApp.deleteWallet(walletId, type as 'wallet' | 'saving' | 'debt')
             if(result)
               triggerRefresh()
-            setModalVisible(false);
+              setModalVisible(false);
           }
         }
       ]
@@ -85,13 +90,31 @@ export default function WalletScreen() {
   };
 
   const handleSave= async()=>{
-    const payLoad = extractWallet(modalType, formData, id)
+    const payLoad = extractWallet(modalType, formData, id, walletForCreateDebt.id)
+    console.log('========', modalType)
     if(payLoad)
      try {
         if (typeAction === 'add') {
-          const reslut =await walletApp.createNewWallet(payLoad)
-          if(reslut)
-            triggerRefresh() 
+          if(modalType==="debt"){
+
+            const p=payLoad as CreateDebtDTO;
+
+            let newPaymentWalletBalance;
+            if(p.type==='loan_from')
+              newPaymentWalletBalance = walletForCreateDebt.balance+p.totalAmount;
+            else
+              newPaymentWalletBalance = walletForCreateDebt.balance-p.totalAmount;
+
+            const result = await walletApp.createNewWallet(payLoad, newPaymentWalletBalance)
+            if(result)
+              triggerRefresh()
+          }else{
+            const reslut =await walletApp.createNewWallet(payLoad)
+            
+            console.log('=======',reslut)
+            if(reslut)
+              triggerRefresh()
+          } 
         } else {
           const reslut = await walletApp.updateWallet(payLoad)
           if(reslut)
@@ -108,11 +131,66 @@ export default function WalletScreen() {
   const openModal = (type: 'wallet' | 'saving' | 'group' | 'debt', item: any = null, typeAction:'edit'|'add') => {
     setModalType(type);
     setModalVisible(true);
-    setEditingItem(item);
     setFormData(item);
     setTypeAction(typeAction)
   };
 
+  const handleOpenHistory =async (walletId:string, walletType:string)=>{
+    setIsOpenModalHistory(true)
+
+    const result = await walletApp.getWalletHistory(walletId, walletType)
+    
+    setWalletHistoies(result)
+  }
+
+  const hanldDeleteItem = async (itemId:string, amount:string, walletId:string, type:string)=>{
+
+    Alert.alert(
+      "Delete",
+      "Are you sure to delete this transaction? Please consider this.",
+      [
+        { text: "Cancal", style: "cancel" },
+        { 
+          text: "Delele", 
+          style: "destructive",
+          onPress: async () => {
+            let newBalance;
+            const wallet = wallets.filter(w=>w.id===walletId);
+
+            if(!wallet)
+              Alert.alert("Error", "The wallet used to execute this transaction has been deleted. You cannot delete this transaction again.", [
+                { text: "Got it", style: "cancel" },
+              ]);
+
+            let wBalance = wallet[0].balance;
+
+            if(historyWallet.actionType==='saving'){
+              newBalance = historyWallet.balance - parseInt(amount);
+              wBalance = wBalance+ parseInt(amount);
+            }
+            else{
+              newBalance = historyWallet.balance + parseInt(amount)
+              wBalance = type==='repay_to'?wBalance+parseInt(amount):wBalance-parseInt(amount);
+            }
+            const result = await walletApp.deleteWalletHistoryItem(historyWallet.id , historyWallet.actionType, itemId, newBalance, walletId, wBalance)
+            if(result) {triggerRefresh(), setIsOpenModalHistory(false)}
+          }
+        }
+      ]
+    );
+    // console.log('actionType: ',historyWallet.actionType)
+    // console.log('itemId: ', itemId)
+    // console.log('amount: ', amount)
+    // console.log('===================================')
+    // console.log('foreign id: ',historyWallet.id)
+    // console.log('old balance: ', historyWallet.balance)
+    // console.log('newBalance: ', newBalance)
+    //  console.log('===================================')
+    // console.log('walletId: ', walletId)
+    // console.log('old balance: ', wallet[0].balance)
+    // console.log('newBalance: ', wBalance)
+  }
+  // console.log('=================================== ', walletForCreateDebt)
   return (
     <GestureHandlerRootView style={{flex:1}}>
       <View style={styles.container}>
@@ -224,6 +302,7 @@ export default function WalletScreen() {
                   key={item.id}
                   style={styles.savingsCard}
                   onPress={() => openModal('saving', item,'edit')}
+                 onLongPress={()=>{handleOpenHistory(item.id, 'saving'), setHistoryWallet({id:item.id, balance:item.balance, actionType:'saving'})}}
                 >
                   <View style={styles.savingsTop}>
                     <View style={styles.savingsIconBox}>
@@ -272,6 +351,7 @@ export default function WalletScreen() {
                 <TouchableOpacity
                   key={item.id}
                   onPress={() => openModal('debt', item,'edit')}
+                  onLongPress={()=>{handleOpenHistory(item.id, 'debt'), setHistoryWallet({id:item.id, balance:item.remaining, actionType:'debt'})}}
                   style={styles.debtItem}
                 >
                   {/* Cụm bên trái: Icon + Thông tin tên */}
@@ -378,7 +458,29 @@ export default function WalletScreen() {
           setFormData={setFormData}
           onPressDelete={handleDelete}
           onPressSave={handleSave}
+          onSelectWallet={()=>{setModalVisible(false),setIsOpenWalletsForCreateDebt(true)}}
+          paymentWallet={walletForCreateDebt}
         />
+        <ModalWalletHistory
+          isOpen={isOpenModalHistory}
+          onPressClose={()=>setIsOpenModalHistory(false)}
+          data={walletHistories}
+          onDeleteItem={hanldDeleteItem}
+          typeAction="history"
+        />
+
+        {isOpenWalletsForCreateDebt&&<ModalWallet
+                    onPressClose={() => {
+                      setIsOpenWalletsForCreateDebt((pre) => !pre);
+                    }}
+                    data={wallets}
+                    walletSelected={formData?.paymentWalletId ??''}
+                    onSelected={async (id: string, name: string,balance: number) => {
+                      setWalletForCreateDebt({id:id,name:name, balance});
+                      setFormData({ ...formData, paymentWalletId: id,});
+                      setModalVisible(true);
+                    }}
+                  />}
 
       </View>
     </GestureHandlerRootView>

@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   trendText: {
-    fontSize: 14,
+    fontSize: 22,
     fontWeight: '700',
   },
   divider: {

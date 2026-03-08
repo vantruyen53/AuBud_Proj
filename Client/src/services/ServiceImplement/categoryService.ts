@@ -3,56 +3,50 @@ import { API_URL } from "@/src/constants/securityContants";
 import axios from 'axios'
 import { ICategoryService } from "@/src/models/interface/ServiceInterface";
 import { ServiceResponse } from "@/src/models/interface/Entities";
+import { apiFetch } from "../auth/apiService";
 
 export class CategoryService implements ICategoryService{
     constructor(private user: UserDTO) {}
 
-    private async _getRequest(endpoint?:string, params?:object): Promise<CategoryDTO[] | null>{
-        try{
-            
-            const res = await fetch(`${API_URL}/category/${endpoint}/${this.user.id}`,{
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.user.accessToken}`
-                }
-            })
+    private async _getRequest(endpoint?: string, params?: object): Promise<CategoryDTO[] | null> {
+        try {
+            // đổi fetch → apiFetch, bỏ headers
+            const res = await apiFetch(`/aubud/api/v1/category/${endpoint}/${this.user.id}`);
+
             if (res.status !== 200) {
                 throw new Error(res.statusText || "Something went wrong");
             }
 
             const json = await res.json();
-            return json.data ?? null
-        }catch (error) {
+            return json.data ?? null;
+        } catch (error) {
             console.error("Network error:", error);
             return null;
         }
     }
 
-    private async _mutationRequest(method:"POST" | "PUT" | "DELETE", data?: any, categoryId?: string):Promise<ServiceResponse<any>>{
-        try{
+    private async _mutationRequest(method: "POST" | "PUT" | "DELETE", data?: any, categoryId?: string): Promise<ServiceResponse<any>> {
+        try {
             const url = method === "DELETE" && categoryId
-                ? `${API_URL}/category/${categoryId}`
-                : `${API_URL}/category`;
+                ? `/aubud/api/v1/category/${categoryId}`
+                : `/aubud/api/v1/category`;
 
-            const res = await fetch(url,{           
-                method: method,
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.user.accessToken}` 
-                },
+            // đổi fetch → apiFetch, bỏ headers
+            const res = await apiFetch(url, {
+                method,
                 body: method !== "DELETE"
                     ? JSON.stringify({ ...data, userId: this.user.id })
                     : JSON.stringify({ userId: this.user.id }),
-            })
+            });
 
             if (!res.ok) {
                 const errorData = await res.json();
                 throw new Error(errorData.message || "Something went wrong");
             }
 
-            const json= await res.json();
-            return json ?? false
-        }catch (error) {
+            const json = await res.json();
+            return json ?? false;
+        } catch (error) {
             console.error(`${method} Error:`, error);
             return { status: false, data: null, message: (error as any)?.message || "An error occurred" };
         }

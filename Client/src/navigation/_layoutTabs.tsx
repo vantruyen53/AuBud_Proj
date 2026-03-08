@@ -23,8 +23,7 @@ export default function LayoutTabs() {
           paddingTop: 8,
         },
       }}>
-          <Tab.Screen 
-            name="index" 
+          <Tab.Screen  name="index" 
             options={{
               title: "Home",
               tabBarIcon: ({ color })=> <MaterialIcons name='home' size={24} color={color}/>

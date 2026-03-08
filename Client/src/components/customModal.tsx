@@ -1,4 +1,4 @@
-import { Modal, KeyboardAvoidingView, Platform, View, Text, TouchableOpacity, TextInput } from "react-native";
+import { Modal, KeyboardAvoidingView, Platform, View, Text, TouchableOpacity, TextInput, FlatList } from "react-native";
 import styles from "../assets/styles/modalStyle";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
@@ -10,6 +10,7 @@ import { useNavigation } from "@react-navigation/native";
 import { HomeStackNavProp } from "../models/types/RootStackParamList";
 import { Colors } from "../constants/theme";
 import { AVAILABLE_ICONS_SENDING, AVAILABLE_ICONS_INCOME, AVAILABLE_COLORS } from "@/src/store/seed/iconList";
+import TransactionItem from '@/src/components/walletTransaction';
 
 import { IWallet, ISaving, ICategory } from "../models/IApp";
 
@@ -31,13 +32,13 @@ export  function ModalForm(props:any) {
             style={styles.modalOverlay}
         >
           <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>
-                        {
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {
                             props.type === "transaction" ? "Edit Transaction":
                             props.type === "wallet" || "saving" || "debt"?
                             <>
-                                {props.typeAction === "edit" ? 'Edit ' : 'Add '}{
+                                {props.typeAction === "edit" ? 'Detail ' : 'Add '}{
                                     props.type === 'wallet' ? 'Wallet' : 
                                     props.type === 'saving' ? 'Saving' :
                                     props.type === 'debt' ? 'Debt/Loan' :
@@ -45,11 +46,11 @@ export  function ModalForm(props:any) {
                                 }
                             </>
                             : ""
-                        }
-                    </Text>
-                    <TouchableOpacity onPress={props.onPressClose}>
-                        <MaterialIcons name="close" size={24} color="#1E293B" />
-                    </TouchableOpacity>
+                }
+              </Text>
+              <TouchableOpacity onPress={props.onPressClose}>
+                <MaterialIcons name="close" size={24} color="#1E293B" />
+              </TouchableOpacity>
             </View>
             {props.type==="group" && props.typeAction==='edit'? 
             <Text>Please join a group to edit or add new group fund</Text> :
@@ -162,14 +163,26 @@ export  function ModalForm(props:any) {
                       onChangeText={(val) => props.setFormData({...props.formData, totalAmount: val})}
                     />
 
-                    <Text style={styles.inputLabel}>Remain amount</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0"
-                      keyboardType="numeric"
-                      value={props.formData?.remaining?.toString()}
-                      onChangeText={(val) => props.setFormData({...props.formData, remaining: val})}
-                    />
+                    {props.typeAction==='add'?
+                      <>
+                        <Text style={styles.inputLabel}>Payment wallet</Text>
+                        <TouchableOpacity
+                          style={styles.input}
+                          onPress={props.onSelectWallet}
+                        >
+                          <Text style={{color:props.paymentWallet?.name?'#000':'#d2d2d2',fontSize: 16,}}>{props.paymentWallet?.name ?? 'Select wallet'}</Text>
+                        </TouchableOpacity>
+                      </>:
+                      <>
+                        <Text style={styles.inputLabel}>Remain amount</Text>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="0"
+                            keyboardType="numeric"
+                            value={props.formData?.remaining?.toString()}
+                            onChangeText={(val) => props.setFormData({...props.formData, remaining: val})}
+                          />
+                      </>}
                   </>
                 )}
               </ScrollView>
@@ -177,7 +190,7 @@ export  function ModalForm(props:any) {
                   {props.typeAction==='edit' &&
                     <TouchableOpacity 
                       style={styles.deleteBtnModal} 
-                      onPress={()=>props.onPressDelete(props?.type, props.formData)}
+                      onPress={()=>props.onPressDelete(props?.type, props.formData.id)}
                     >
                       <MaterialIcons name="delete-forever" size={20} color="#EF4444" />
                       <Text style={styles.deleteBtnModalText}>Delete</Text>
@@ -311,6 +324,8 @@ export function ModalDebts(props:any){
               <MaterialIcons name="close" size={24} color="#1E293B" />
             </TouchableOpacity>
           </View>
+
+          {debtsData.length===0&&<Text style={styles.noTransactionsText}>No debt was recorded, or you haven't selected a repayment method yet.</Text>}
 
           {/* Data  */}
           {debtsData.map((item) => {
@@ -499,12 +514,8 @@ export function ModalCategoryName(props:any){
   )
 }
 
-export function ModalBudget({visible,onPressClose, onPressSave, nav,selectedCategory,target,onChangeText}:any){
-  const navigation = useNavigation<HomeStackNavProp>();
-  console.log('======target at ModalBudget: ', target)
-
-  const [tartget, setTarget] = useState(0)
-
+export function ModalBudget({visible,onPressClose, onPressSave, nav,formData,onChangeText,onPressEdit, type}:any){
+  // console.log(formData)
   return(
     <Modal
       visible={visible}
@@ -518,18 +529,18 @@ export function ModalBudget({visible,onPressClose, onPressSave, nav,selectedCate
         <View style={styles.modalContent}>
           {/* Header  */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Your Debt</Text>
+            <Text style={styles.modalTitle}>{type==='add'?'Select Your Debt':'Update target'}</Text>
             <TouchableOpacity onPress={onPressClose}>
               <MaterialIcons name="close" size={24} color="#1E293B" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.inputLabel}>Target</Text>
+          <Text style={styles.inputLabel}>Target{type!=='add'&&` - ${formData.categoryName}`}</Text>
           <TextInput
               style={styles.input}
               placeholder="Example: Breakfast, Milk, Game,..."
               keyboardType="numeric"
-              value={target === 0 ? '' : target.toString()}
+              value={formData.target?.toString()??''}
               onChangeText={(val) => {
                   // Xử lý chuỗi rỗng để không bị lỗi parseInt(NaN)
                   const numericValue = val.replace(/[^0-9]/g, '');
@@ -537,29 +548,33 @@ export function ModalBudget({visible,onPressClose, onPressSave, nav,selectedCate
               }}
           />
 
-          <Text style={styles.inputLabel}>Select category</Text>
-          <TouchableOpacity
-              style={styles.catItem}
-              onPress={()=>nav()}
-            >
-              <View
-                style={[styles.catIconBg, 
-                  selectedCategory.id!==""? 
-                    { backgroundColor: `rgba(${selectedCategory.iconColor},0.1)` }:
-                    { backgroundColor: `#12D0FF10` }
-                ]}
+          {type==='add' && <>
+            <Text style={styles.inputLabel}>Select category</Text>
+            <TouchableOpacity
+                style={styles.catItem}
+                onPress={()=>nav()}
               >
-                <MaterialIcons
-                  color={selectedCategory.id!==""?`rgb(${selectedCategory.iconColor})`:"#12D0FF"}
-                  size={28}
-                  name={selectedCategory.id!==""?selectedCategory.iconName:"add-circle"}
-                />
-              </View>
-              <Text style={[styles.catName,selectedCategory.id!==""?{color:'#000'}:{color:'#d2d2d2'}]}
-              >{selectedCategory.id!==""?selectedCategory.name:'Category name'}</Text>
-          </TouchableOpacity>
+                <View
+                  style={[styles.catIconBg, 
+                    formData.iconColor? 
+                      { backgroundColor: `rgba(${formData.iconColor},0.1)` }:
+                      { backgroundColor: `#12D0FF10` }
+                  ]}
+                >
+                  <MaterialIcons
+                    color={formData.iconColor?`rgb(${formData.iconColor})`:"#12D0FF"}
+                    size={28}
+                    name={formData.iconName??"add-circle"}
+                  />
+                </View>
+                <Text style={[styles.catName,formData.name?{color:'#000'}:{color:'#d2d2d2'}]}
+                >{formData.name??"Select category"}</Text>
+            </TouchableOpacity>
+          </>}
 
-          <TouchableOpacity style={[styles.saveBtn, {flex:0, width:'100%', height:50, marginTop:15}]} onPress={onPressSave}>
+          <TouchableOpacity style={[styles.saveBtn, {flex:0, width:'100%', height:50, marginTop:15}]} 
+            onPress={type==='add'?onPressSave:onPressEdit}
+          >
             <Text style={styles.saveBtnText}>Save</Text>
           </TouchableOpacity>
         </View>
@@ -643,6 +658,45 @@ export function ModalCategory({isModalVisible, setIsModalVisible, isEditing,
             </ScrollView>
           </View>
         </View>
+    </Modal>
+  )
+}
+
+export function ModalWalletHistory({isOpen, onPressClose, data, onDeleteItem}:any){
+  const renderItem = ({item}:any)=>(
+    <TransactionItem
+      amount={item.amount}
+      date={item.createdAt}
+      wallet={item.walletName}
+      onDelete={onDeleteItem}
+      note={item.note}
+      id={item.id}
+      walletId={item.walletId}
+      type={item?.type ?? ''}
+    />
+  )
+  return(
+    <Modal
+      visible={isOpen}
+      animationType="fade"
+      transparent={true}
+    >
+      <View style={styles.modalOverlay}>
+        <View  style={styles.modalContent}>
+          {/* Header  */}
+           <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Your activity</Text>
+            <TouchableOpacity onPress={onPressClose}>
+              <MaterialIcons name="close" size={24} color="#1E293B" />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={data}
+            renderItem={(item)=>renderItem(item)}
+            keyExtractor={item => item.id}
+          />
+        </View>
+      </View>
     </Modal>
   )
 }

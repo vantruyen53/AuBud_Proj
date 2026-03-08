@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
       marginTop: -35,
       paddingBottom: 0,
       paddingTop:0,
-      overflow:'hidden'
+      overflow:'hidden',
     },
     navBar:{
       flexDirection: 'row',
@@ -388,15 +388,20 @@ const styles = StyleSheet.create({
   },
 
   /* Swipe Actions */
+  hiddenContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+    },
   deleteAction: {
-    backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
     height: '85%',
     alignSelf: 'flex-end',
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 5,
     marginBottom: 12,
   },
   deleteActionContent: {

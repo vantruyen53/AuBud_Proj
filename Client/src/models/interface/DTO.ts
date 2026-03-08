@@ -35,7 +35,7 @@ export interface CreateTransactionDTO{
     note: string;
     title: string;
     budgetId?:string,
-    status:'active',
+    status:'completed',
     userId:string
 }
 
@@ -54,10 +54,11 @@ export interface CreateDebtDTO{
   type:'loan_from' | 'loan_to',
   partnerName:string,
   totalAmount:number,
-  remaining:number
+  remaining?:number
   status: 'active' | 'done' | 'deleted',
   createdAt:String,
-  actionType:'wallet'|'debt'|'saving'|'groupFund'
+  actionType:'wallet'|'debt'|'saving'|'groupFund',
+  paymentWalletId?:string,
 }
 export interface DebtTransactionDTO{
   id?: string, // cho update
@@ -105,5 +106,13 @@ export interface ConvertDTO{
   note:string,
   actionType:'convert',
   userId:string,
+}
+
+
+export interface BudgetDTO{
+  target:string //sau khi mã hóa,
+  categoryId:string,
+  date:string
+  status:'active' // | 'deleted'
 }
 

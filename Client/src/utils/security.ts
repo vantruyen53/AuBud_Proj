@@ -197,8 +197,9 @@ export async function encryptFormData(
 
   for (const [key, value] of Object.entries(formData)) {
     // Bỏ qua key không cần mã hóa như id
-    if (key === 'id' || key==="status" || key==="createdAt" ||
-       key==="actionType" || key==="type" || key.includes("Id") || key.includes("_") || value === null || value === undefined || value==="NaN") {
+    if (key === 'id' || key==="status" || key==="createdAt" || key==="date"||
+       key==="actionType" || key==="type" || key.includes("Id") || key.includes("_") 
+       || value === null || value === undefined || value==="NaN" || value==="") {
       result[key] = value;
       continue;
     }
@@ -215,12 +216,13 @@ export async function encryptFormData(
 export async function decryptFormData<T>(
   encryptedData: Record<string, any>,
   secretKeyBase64: string,
-  skipKeys: string[] = ['id', 'status', 'createdAt', 'actionType',  'type', "categoryName","iconColor","iconName",'library',"categoryType"],
+  skipKeys: string[] = ['id', 'status', 'createdAt', 'actionType',  'type', 
+    "categoryName","iconColor","iconName",'library',"categoryType"],
   label: string = 'Unknown'
 ): Promise<T> {
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(encryptedData)) {
-    if (skipKeys.includes(key) || value === null || value === undefined || key.includes("_")|| key.includes("Id")) {
+    if (skipKeys.includes(key) || value === null || value === undefined || value === ""|| key.includes("_")|| key.includes("Id")) {
       result[key] = value;
       continue;
     }

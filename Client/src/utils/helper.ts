@@ -1,4 +1,4 @@
-import { ITransactionItem } from "../models/interface/Entities";
+import { ITransactionItem, IDateState, IStatisticDate, IStatisticCategory } from "../models/interface/Entities";
 import { WalletDTO, CreateDebtDTO, CreateSavingDTO,
   DebtTransactionDTO,SavingTransactionDTO,ConvertDTO,CreateTransactionDTO
  } from "../models/interface/DTO";
@@ -17,10 +17,11 @@ export const totalSenIn = (data: ITransactionItem[], type: string) => {
   return total;
 }
 
-export const createIconAcc=(name:string)=>{
-    const nameArray =name.split(' ');
-    return `${nameArray[0][0].toUpperCase()}${nameArray[nameArray.length-1][0].toUpperCase()}`;
-  }
+export const createIconAcc = (name: string = 'No Name') => {
+  const safeName = name?.trim() || 'No Name';
+  const nameArray = safeName.split(' ').filter(s => s.length > 0); 
+  return `${nameArray[0][0].toUpperCase()}${nameArray[nameArray.length - 1][0].toUpperCase()}`;
+};
 
 
 export const genereteWeekRange = (month:number, year:number)=>{
@@ -59,7 +60,7 @@ export const monthLatinh =(m: number)=>{
   }
 }
 
-export const extractWallet = (type: 'wallet' | 'saving' | 'debt'| "group" | null, data: any, userId:string)=>{
+export const extractWallet = (type: 'wallet' | 'saving' | 'debt'| "group" | null, data: any, userId:string,paymentWalletId:string)=>{
   try{
     switch(type){
       case 'wallet':
@@ -80,10 +81,11 @@ export const extractWallet = (type: 'wallet' | 'saving' | 'debt'| "group" | null
           type: data.type,        
           partnerName: data.partnerName,
           totalAmount: isNaN(Number(data.totalAmount)) ? 0 : Number(data.totalAmount ?? 0),
-          remaining:   isNaN(Number(data.remaining))   ? 0 : Number(data.remaining   ?? 0),
+          remaining:   isNaN(Number(data.remaining)) ? 0 : Number(data.remaining ?? 0),
           status:'active',
           createdAt:dateTimeStr(),
-          actionType:'debt'
+          actionType:'debt',
+          paymentWalletId:paymentWalletId ??''
         }as CreateDebtDTO;
 
       case 'saving':
@@ -91,7 +93,7 @@ export const extractWallet = (type: 'wallet' | 'saving' | 'debt'| "group" | null
           id: data.id,
           name: data.name,
           balance:   isNaN(Number(data.balance)) ? 0 : Number(data.balance ?? 0), 
-        target:    isNaN(Number(data.target))  ? 0 : Number(data.target  ?? 0), 
+          target:    isNaN(Number(data.target))  ? 0 : Number(data.target  ?? 0), 
           status:'active',
           createdAt:dateTimeStr(),
           actionType:'saving',
@@ -118,7 +120,7 @@ export const  extractTransaction= (type: 'Income' | 'Saving' | 'Debt'| "Sending"
           note: data?.note,
           title: data.title,
           budgetId:data?.budgetId,
-          status:'active',
+          status:'completed',
           userId:userId
         } as CreateTransactionDTO;
       case "Sending":
@@ -132,7 +134,7 @@ export const  extractTransaction= (type: 'Income' | 'Saving' | 'Debt'| "Sending"
           note: data?.note,
           title: data.title,
           budgetId:data?.budgetId,
-          status:'active',
+          status:'completed',
           userId:userId
         }as CreateTransactionDTO;
       case 'Debt':
@@ -174,4 +176,104 @@ export const  extractTransaction= (type: 'Income' | 'Saving' | 'Debt'| "Sending"
     console.log('===========extractWallet error: ', err)
     return null
   }
+}
+
+export function transformToHorizontalChartData(
+  transactions: ITransactionItem[],
+  timeLine: "Date" | "Month" | "Year",
+  specificTime: IDateState
+): IStatisticDate[] {
+
+  switch (timeLine) {
+    case "Date": {
+      // Chỉ 1 ngày → gom tất cả vào 1 entry
+      const income  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const sending = transactions.filter(t => t.type === 'sending').reduce((s, t) => s + t.amount, 0);
+      return [{
+        id: `date-${specificTime.y}-${specificTime.m}-${specificTime.d}`,
+        date: `${specificTime.y}-${specificTime.m}-${specificTime.d}`,
+        income,
+        sending,
+      }];
+    }
+
+    case "Month": {
+      // Gom theo từng ngày trong tháng
+      const map = new Map<number, { income: number; sending: number }>();
+
+      transactions.forEach(t => {
+        const day = new Date(t.date).getDate(); // lấy ngày 1-31
+        const cur = map.get(day) ?? { income: 0, sending: 0 };
+        if (t.type === 'income')  cur.income  += t.amount;
+        if (t.type === 'sending') cur.sending += t.amount;
+        map.set(day, cur);
+      });
+
+      // Tạo đủ 31 ngày (hoặc số ngày thực tế của tháng), ngày không có data thì = 0
+      const daysInMonth = new Date(parseInt(specificTime.y), parseInt(specificTime.m), 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const val = map.get(day) ?? { income: 0, sending: 0 };
+        return {
+          id: `month-day-${day}`,
+          date: `${specificTime.y}-${specificTime.m}-${day < 10 ? `0${day}` : day}`,
+          income: val.income,
+          sending: val.sending,
+        };
+      });
+    }
+
+    case "Year": {
+      // Gom theo từng tháng
+      const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const map = new Map<number, { income: number; sending: number }>();
+
+      transactions.forEach(t => {
+        const month = new Date(t.date).getMonth(); // 0-11
+        const cur = map.get(month) ?? { income: 0, sending: 0 };
+        if (t.type === 'income')  cur.income  += t.amount;
+        if (t.type === 'sending') cur.sending += t.amount;
+        map.set(month, cur);
+      });
+
+      return Array.from({ length: 12 }, (_, i) => {
+        const val = map.get(i) ?? { income: 0, sending: 0 };
+        return {
+          id: `m${i + 1}`,
+          date: MONTH_LABELS[i],
+          income: val.income,
+          sending: val.sending,
+        };
+      });
+    }
+  }
+}
+
+export function transformToPieChartData(
+  transactions: ITransactionItem[],
+  timeLine: "Date" | "Month" | "Year",
+  specificTime: IDateState
+): IStatisticCategory[] {
+
+  // Gom nhóm theo category + type
+  const map = new Map<string, IStatisticCategory>();
+
+  transactions.forEach(t => {
+    const categoryName = t.category?.name || 'Unknown';
+    const key = `${categoryName}-${t.type}`; // key unique theo category + loại
+
+    if (map.has(key)) {
+      map.get(key)!.totalAmount += t.amount;
+    } else {
+      map.set(key, {
+        id: key,
+        totalAmount: t.amount,
+        type: t.type as 'sending' | 'income',
+        categoryName,
+        date: specificTime.y + (specificTime.m ? `-${specificTime.m}` : '') + (specificTime.d ? `-${specificTime.d}` : ''),
+      });
+    }
+  });
+
+  return Array.from(map.values());
 }

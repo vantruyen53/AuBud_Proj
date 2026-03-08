@@ -3,6 +3,7 @@ import AppContextType from "../models/types/appContext";
 import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 import { SECRET_KEY_STORE, API_URL } from "../constants/securityContants";
+import { setSessionExpiredCallback } from "../services/auth/apiService";
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
@@ -34,7 +35,15 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
   const [id, setId] = useState<string>('');
   const [role, setRole] = useState('');
   const [userName, setuserName] = useState('');
+  const [email, setEmail] = useState('')
   const [isShowData, setIsShowData] = useState(true)
+
+  useEffect(() => {
+    // Đăng ký callback một lần khi app khởi động
+    setSessionExpiredCallback(() => {
+      clearAuth(false);
+    });
+  }, []);
 
   // Chạy một lần khi app khởi động — kiểm tra token còn hợp lệ không
   useEffect(() => {
@@ -80,14 +89,17 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
 
         if (!response.ok) throw new Error("Refresh thất bại");
 
+        console.log('===============Try refresh token========')
         const data = await response.json();
-        await signIn(data.accessToken, data.refreshToken);
+        console.log('Status: ',data?'succees':'fail')
+        console.log('Data:', data)
+        await signIn(data.accessToken, data.refreshToken, data.user.email);
     } catch {
         await clearAuth(false); // ← false: giữ lại secretKey
     }
 };
 
-  const signIn = async (newAccessToken: string, newRefreshToken: string) => {
+  const signIn = async (newAccessToken: string, newRefreshToken: string, email:string) => {
     const decoded = jwtDecode<JwtPayload>(newAccessToken);
 
     // Lưu vào SecureStore (Keychain iOS / Keystore Android)
@@ -98,6 +110,7 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
     setRefreshToken(newRefreshToken);
     setId(decoded.id);
     setuserName(decoded.userName);
+    setEmail(email)
     setRole(decoded.role);
     setIsAuthenticated(true);
   };
@@ -113,15 +126,14 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
             }).catch((err) => console.error("Logout API error:", err));
         }
     } finally {
-        await clearAuth(true); // ← true: xóa cả secretKey
+        await clearAuth(true);
     }
-};
+  };
 
   const clearAuth = async (clearSecret: boolean = false) => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     
-    // ✅ Chỉ xóa secretKey khi user chủ động logout
     if (clearSecret) {
         await SecureStore.deleteItemAsync(SECRET_KEY_STORE);
     }
@@ -130,14 +142,15 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
     setRefreshToken("");
     setId("");
     setuserName("");
+    setEmail("")
     setRole("");
     setIsAuthenticated(false);
-};
+  };
 
   const toggleShowData = () =>{setIsShowData((pre)=> !pre)}
   
   return(
-    <AppContext.Provider value={{isAuthenticated, isLoading, accessToken, refreshToken, id, userName, role, isShowData, signIn, signOut, toggleShowData}}>
+    <AppContext.Provider value={{isAuthenticated, isLoading, accessToken, refreshToken, id, userName, role, email, isShowData, signIn, signOut, toggleShowData}}>
         {children}
     </AppContext.Provider>
   )

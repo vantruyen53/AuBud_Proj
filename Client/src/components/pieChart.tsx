@@ -34,7 +34,7 @@ const CategoryPieChart: React.FC<Props> = ({ data, type, showLabel, size=150 }) 
 
     // KIỂM TRA: Nếu là dữ liệu Budget (có trường balance) và không showLabel
     if (!showLabel && 'balance' in data[0]) {
-      const totalGoal = data.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+      const totalGoal = data.reduce((sum, item) => sum + (item.target || 0), 0);
       const totalSpent = data.reduce((sum, item) => sum + (item.balance || 0), 0);
       const remaining = totalGoal - totalSpent;
 
@@ -51,7 +51,7 @@ const CategoryPieChart: React.FC<Props> = ({ data, type, showLabel, size=150 }) 
     const filtered = type ? data.filter(item => item.type === type) : data;
     return filtered.map((item, index) => ({
       id: item.id || String(index),
-      val: item.totalAmoun || item.totalAmount || 0, // Chấp nhận cả 2 cách viết
+      val: item.totalAmount || item.target || 0, // Chấp nhận cả 2 cách viết
       name: item.categoryName || item.category?.name || 'Unknown',
       color: colors[index % colors.length]
     }));
@@ -70,7 +70,7 @@ const CategoryPieChart: React.FC<Props> = ({ data, type, showLabel, size=150 }) 
 
   const spentPercentage = useMemo(() => {
     if (data.length > 0 && 'balance' in data[0]) {
-      const totalGoal = data.reduce((sum, item) => sum + item.totalAmount, 0);
+      const totalGoal = data.reduce((sum, item) => sum + item.target, 0);
       const totalSpent = data.reduce((sum, item) => sum + (item.balance), 0);
       return ((totalSpent / totalGoal) * 100).toFixed(0);
     }
@@ -145,7 +145,7 @@ const CategoryPieChart: React.FC<Props> = ({ data, type, showLabel, size=150 }) 
         <View style={styles.centerTextWrapper}>
           <Text style={[styles.totalLabel, spentPercentage?{fontSize:13}:{fontSize:10}]}>{spentPercentage ? 'Total Spent' : 'Total'}</Text>
           <Text style={[styles.totalValue,spentPercentage?{fontSize:20}:{fontSize:16}]} numberOfLines={1}>
-            {spentPercentage ? `${spentPercentage}%`: totalSum > 1000000 
+            {totalSum===1?0:spentPercentage ? `${spentPercentage}%`: totalSum > 1000000 
               ? (totalSum / 1000000).toFixed(1) + "M" 
               : formatMoney(totalSum).replace(" ₫", "")}
           </Text>

@@ -23,7 +23,7 @@ import {dateFormat,formatCurrency,convertDateFormat,} from "@/src/utils/format";
 import { IDateState, ITransactionItem } from "../../../models/interface/Entities";
 import { getTransactionSections } from "../../../utils/generateSectionList ";
 import { TransactionApp } from "@/src/store/application/TransactionApp";
-import { ITransactionSection } from "../../../models/IApp";
+import FilterMenu from "@/src/components/FilterMenuSearch";
 
 export default function HistoryScreen() {
   const date = new Date();
@@ -44,12 +44,13 @@ export default function HistoryScreen() {
   const [yearShown, setYearShown] = useState(year);
   const [trigger, setTrigger]=useState(0)
 
+  //FILTER
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [filterBy, setFilterBy] = useState("title");
+
   //HANDLE DATA 
   const [searchContent, setSearchContent] = useState("");
   const [specificTime, setSpecificTime] = useState<IDateState>({y: year.toString(),m: month.toString(),d: day.toString(),});
-  const [editingTx, setEditingTx] = useState<ITransactionItem | null>(null);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [formData, setFormData] = useState<any>({});
 
   //DATA MANAGEMENT
   const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
@@ -99,9 +100,20 @@ export default function HistoryScreen() {
 
   //3. Lọc danh và gom nhóm theo chữ cái
   const sections = useMemo(() => {
-    const dataFilterd = allTransactions.filter(t => t.type===activeCategoryTab)  
+    let  dataFilterd = allTransactions.filter(t => t.type===activeCategoryTab)  
+
+    if(isSearch && searchContent.trim()){
+      dataFilterd = dataFilterd.filter(t =>{
+        const query = searchContent.toLowerCase().trim();
+        if (filterBy === "title") return t.title?.toLowerCase().includes(query);
+        if (filterBy === "category") return t.category?.name?.toLowerCase().includes(query);
+        if (filterBy === "amount") return t.amount?.toString().includes(query);
+        return true;
+      });
+    }
+
     return getTransactionSections(dataFilterd);
-  }, [activeCategoryTab, allTransactions, trigger]);
+  }, [activeCategoryTab, allTransactions, searchContent, isSearch]);
 
   //4. Tạo các thành cho SwipeListView
   const renderHeader = () => (
@@ -273,7 +285,7 @@ export default function HistoryScreen() {
       </Text>
     </View>
   );
-  const renderItem = (data: any, rowMap: any) => {
+  const renderItem = (data: any) => {
     const item = data.item as ITransactionItem;
     return (
       <Transaction
@@ -285,7 +297,7 @@ export default function HistoryScreen() {
         iconColor={item.category.iconColor}
         type={item.type}
         showData={true}
-        handleEdit={() => handleEdit(item, rowMap)}
+        handleDetail={() => handleDetail(item)}
       />
     );
   };
@@ -316,13 +328,11 @@ export default function HistoryScreen() {
     setSpecificTime({ y: year.toString(), m: m.toString(), d: d.toString() });
 
   //6. Hanld sửa và xóa
-  const handleEdit = (tx: ITransactionItem, rowMap: any) => {
-    if (rowMap[tx.id]) {
-      rowMap[tx.id].closeRow();
-    }
-    setEditingTx(tx);
-    setFormData(tx);
-    setModalVisible(true);
+  const handleEdit = (tx: ITransactionItem) => {
+    navigation.navigate("addTransaction",{
+      hanldeType:'edit',
+      payLoad: tx,
+    })
   };
   const handleDelete = (payLoad: ITransactionItem) => {
     Alert.alert(
@@ -342,6 +352,7 @@ export default function HistoryScreen() {
       ],
     );
   };  
+  const handleDetail=(item:ITransactionItem)=>{}
 
   const navigation = useNavigation<HomeStackNavProp>();
 
@@ -360,7 +371,7 @@ export default function HistoryScreen() {
                 <View style={styles.formSearch}>
                   <TextInput
                     value={searchContent}
-                    onChangeText={setSearchContent}
+                    onChangeText={(val) => setSearchContent(val)}
                     style={styles.contentSearch}
                     autoFocus
                   />
@@ -375,7 +386,7 @@ export default function HistoryScreen() {
                     ""
                   )}
                 </View>
-                <TouchableOpacity style={styles.filterSearch} onPress={() => {}}>
+                <TouchableOpacity style={styles.filterSearch} onPress={() => setFilterVisible(true)}>
                   <MaterialIcons
                     name="filter-list"
                     size={20}
@@ -416,23 +427,35 @@ export default function HistoryScreen() {
           useSectionList
           sections={sections as any}
           keyExtractor={(item: ITransactionItem) => item.id}
-          rightOpenValue={-80}
+          rightOpenValue={-160}
           disableRightSwipe={true}
           swipeToOpenPercent={40}
           showsVerticalScrollIndicator={false}
           renderSectionHeader={renderSectionHeader}
           ListHeaderComponent={renderHeader}
           renderItem={renderItem}
-          renderHiddenItem={(data, rowMap) => (
-            <TouchableOpacity
-              onPress={() => handleDelete(data.item)}
-              style={styles.deleteAction}
-            >
-              <Animated.View style={styles.deleteActionContent}>
-                <Text style={styles.deleteActionText}>Delete</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          )}
+          renderHiddenItem={(data, rowMap) => {
+            return(
+              <View style={styles.hiddenContainer}>
+                <TouchableOpacity
+                  onPress={() => handleDelete(data.item)}
+                  style={[styles.deleteAction,{backgroundColor: '#EF4444'}]}
+                >
+                  <Animated.View style={styles.deleteActionContent}>
+                    <Text style={styles.deleteActionText}>Delete</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleEdit(data.item)}
+                  style={[styles.deleteAction, {backgroundColor:"#37bcff"}]}
+                >
+                  <Animated.View style={styles.deleteActionContent}>
+                    <Text style={styles.deleteActionText}>Edit</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              </View>
+            )
+          }}
         />
        </View>
 
@@ -459,6 +482,12 @@ export default function HistoryScreen() {
           specificTime={specificTime}
         />
       ) : null}
+      <FilterMenu
+        visible={filterVisible}
+        selected={filterBy}
+        onSelect={(key) => setFilterBy(key)}
+        onClose={() => setFilterVisible(false)}
+      />
     </View>
   );
 }

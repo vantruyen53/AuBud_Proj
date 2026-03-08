@@ -6,7 +6,7 @@ export default function Transaction(props:any) {
   return (
     <TouchableOpacity
         style={styles.transactionCard}
-        onPress={()=>props.handleEdit({...props})}
+        onPress={()=>props.handleDetail()}
         activeOpacity={1}
     >
         <View style={[styles.transIconBg, {backgroundColor:`rgba(${props.iconColor},0.1)`}]}>

@@ -1,25 +1,34 @@
 import { Text, ScrollView, TouchableOpacity, View,Alert } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import styles from "@/src/assets/styles/analysisStyle";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
-import { useState, useEffect } from "react";
-import { IDateState, IStatisticCategory, IStatisticDate } from "@/src/models/IApp";
+import { useState, useEffect, useMemo } from "react";
+
+import { ITransactionItem, IDateState, IStatisticDate, IStatisticCategory} from "@/src/models/interface/Entities";
 import MonthGrid from "@/src/components/monthGrid";
 import YearList from "@/src/components/yearList";
 import Calendar from "@/src/components/calendar";
 import {ModalTime} from '../../components/customModal';
 import BarChart from '@/src/components/barChartTransaction';
 import { dateFormat, formatCurrency ,convertDateFormat} from "@/src/utils/format";
-import {dailyStatistic, monthlyStatistics, yearlyStatistics, dailyCategoryStats, monthlyCategoryStats, yearlyCategoryStats} from '@/src/store/seed/statistics';
 import HorizontalBar from '@/src/components/horizontalBarChart';
 import CategoryPieChart from '@/src/components/pieChart';
-import { monthLatinh } from "@/src/utils/helper";
+import { monthLatinh, transformToHorizontalChartData, transformToPieChartData } from "@/src/utils/helper";
+import styles from "@/src/assets/styles/analysisStyle";
+import { useProvider } from "@/src/hooks/useProvider";
+import { TransactionApp } from "@/src/store/application/TransactionApp";
+import {Colors} from '@/src/constants/theme';
 
 export default function AnalysisScreen() {
   const date = new Date();
   const year = date.getFullYear();
   const month = date.getMonth()+1;
   const day = date.getDate();
+  const {id, accessToken}=useProvider()
+
+  const tractionApp = useMemo(
+    () => new TransactionApp({ id, accessToken }),
+    [id, accessToken]
+  );
 
   const [isOpenMonthGrid, setIsOpenMonthGrid] = useState(false)
   const [isOpenYearList, setIsOpenYearList] =  useState(false)
@@ -34,23 +43,53 @@ export default function AnalysisScreen() {
   const [dataHorizontalChart, setDataHorizontalChart] = useState<IStatisticDate[]>([]);
   const [dataPieChart, setDataPieChart]= useState<IStatisticCategory[]>([])
 
-  //gán giá trị thời gian hiện tại theo timeLine
+  //DATA MANAGEMENT
+    const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
+    const [summary, setSummary] = useState({totalSending: 0,totalIncome: 0,balance: 0,});
+    const [monthSummary, setMonthySummary]=useState({avgDaily:0, percent:0, isIncrease:false})
+  
+
+  // 1. gán giá trị thời gian hiện tại theo timeLine
+  const handleChangeTimeLine = (newTimeLine: "Date" | "Month" | "Year") => {
+    setTimeLine(newTimeLine);
+
+    // Update specificTime ngay lập tức, không chờ useEffect
+    switch (newTimeLine) {
+      case "Date":
+        setSpecificTime({ y: year.toString(), m: month.toString(), d: day.toString() });
+        break;
+      case "Month":
+        setSpecificTime({ y: year.toString(), m: month.toString(), d: "" });
+        break;
+      case "Year":
+        setSpecificTime({ y: year.toString(), m: "", d: "" });
+        break;
+    }
+  };
+
+  // 2: fetch data khi specificTime thay đổi
   useEffect(() => {
-      switch (timeLine) {
-        case "Date":
-          setSpecificTime({y:year.toString(), m: month.toString(), d: day.toString()});
-          break;
-        case "Month":
-          setSpecificTime({y:year.toString(), m:month.toString(), d:""});
-          break;
-        case "Year":
-          setSpecificTime({y:year.toString(), m:month.toString(), d:""});
-          break;
-        default:
-          setSpecificTime({y:year.toString(), m:month.toString(), d:""});
-          break;
+    const fetchData = async () => {
+      const since = timeLine === "Date" ? 'day' : timeLine === "Month" ? 'month' : 'year';
+      const result = await tractionApp.getTransactionHistory(
+        parseInt(specificTime.d) || 0,
+        parseInt(specificTime.m) || 0,
+        parseInt(specificTime.y),
+        since
+      );
+      const {avgDaily, percent, isIncrease} = await tractionApp.getMonthlySummary(day, month, year)
+      setMonthySummary({avgDaily, percent, isIncrease})
+      if (result) {
+        setAllTransactions(result.rawTransactions);
+        setSummary({
+          totalSending: result.totalSending,
+          totalIncome: result.totalIncome,
+          balance: result.balance,
+        });
       }
-    }, [timeLine]);
+    };
+    fetchData();
+  }, [specificTime]);
   
    //Cảnh báo khi người dùng xem năm sau của năm hiện tại
   const handleOverYear = ()=>{
@@ -87,21 +126,15 @@ export default function AnalysisScreen() {
   const handleDateSelect = (year: number, m:number, d:number) => setSpecificTime({y: year.toString(), m: m.toString(), d: d.toString()});
 
   useEffect(() => {
-    switch (timeLine) {
-      case "Date":
-        setDataHorizontalChart(dailyStatistic);
-        setDataPieChart(dailyCategoryStats)
-        break;
-      case "Month":
-        setDataHorizontalChart(monthlyStatistics);
-        setDataPieChart(monthlyCategoryStats)
-        break;
-      case "Year":
-        setDataHorizontalChart(yearlyStatistics);
-        setDataPieChart(yearlyCategoryStats)
-        break;
-    }
-  }, [timeLine]);
+    if (!allTransactions) return;
+
+    const chartData = transformToHorizontalChartData(allTransactions, timeLine, specificTime);
+    const pieChartData  = transformToPieChartData(allTransactions, timeLine, specificTime);
+
+    setDataHorizontalChart(chartData);
+    setDataPieChart(pieChartData);
+
+  }, [specificTime, allTransactions]);
 
   const SectionHeader = ({ title, showMore = true }: { title: string, showMore?: boolean }) => (
     <View style={[styles.sectionHeader, title==="OverView"?{marginTop:24}: null]}>
@@ -113,6 +146,8 @@ export default function AnalysisScreen() {
       )}
     </View>
   );
+
+  console.log('Data pie chart',dataPieChart)
 
   const monthLat = monthLatinh(parseInt(specificTime.m))
 
@@ -159,7 +194,7 @@ export default function AnalysisScreen() {
       >
         {/* Overview bar chart  */}
         <SectionHeader title="OverView" showMore={false}/>
-        <BarChart sending={17800000} income={6000000}/>
+        <BarChart sending={summary.totalSending} income={summary.totalIncome}/>
 
         {/* Tabs thu-chi*/}
         <View style={styles.segmentControlContainer}>
@@ -202,7 +237,7 @@ export default function AnalysisScreen() {
         <SectionHeader title="Statistics balance" showMore={false}/>
         <HorizontalBar 
           data={dataHorizontalChart}
-          type={activeCategoryTab}
+          type={activeCategoryTab} //sending or income
           timeLine={timeLine}
           month={parseInt(specificTime.m)}
           year={parseInt(specificTime.y)}/>
@@ -219,18 +254,19 @@ export default function AnalysisScreen() {
         <View style={styles.bottomStats}>
            <View style={styles.statRow}>
               <Text style={styles.statLabel}>
-                {timeLine!=="Year"?`Average daily spending in ${monthLat}`: `Average monthly spending in ${specificTime.y}`}
+                {`Average daily spending in ${monthLat}`}
               </Text>
-              <Text style={styles.statValue}>500.000</Text>
+              <Text style={styles.statValue}>{formatCurrency(monthSummary.avgDaily, {absolute:true})}</Text>
            </View>
 
            <View style={styles.divider} />
 
            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>
-                {timeLine!=="Year"?`Balance in ${monthLat}`: `Balance in ${specificTime.y}`}
-              </Text>
-              <Text style={styles.statValue}>2.000.000</Text>
+              <Text style={styles.statLabel}>Difference compared to last month</Text>
+               <View style={styles.trendRow}>
+                <MaterialIcons name={monthSummary.isIncrease?"arrow-drop-up":"arrow-drop-down"} size={25} color={monthSummary.isIncrease? Colors.light.error:Colors.light.success} />
+                <Text style={[styles.trendText, { color:monthSummary.isIncrease? Colors.light.error:Colors.light.success }]}>{monthSummary.percent}%</Text>
+              </View>
            </View>
         </View>
       </ScrollView>
@@ -257,7 +293,7 @@ export default function AnalysisScreen() {
           isVisible={showModal}
           onPressClose={()=>setShowModal(false)}
           timeLine={timeLine}
-          setTimeLine={setTimeLine}
+          setTimeLine={handleChangeTimeLine}
         />
     </View>
   )

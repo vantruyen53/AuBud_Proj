@@ -12,7 +12,7 @@ export const getTransactionSections = (
   // Nhóm theo ngày
   const groups = sourceData.reduce(
     (acc, item) => {
-      const date = item.date?.split('T')[0];
+      const date = item.date?.split(' ')[0];
       if (!acc[date]) {
         acc[date] = [];
       }

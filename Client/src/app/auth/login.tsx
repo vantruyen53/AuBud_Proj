@@ -50,7 +50,6 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     const validationForm = validateForm(email, password);
-     console.log("Data to server================")
     if (validationForm) {
       Alert.alert(validationForm);
       return;
@@ -67,7 +66,7 @@ export default function LoginScreen() {
       } 
 
       if (result.status) {
-        await signIn(result.accessToken, result.refreshToken);
+        await signIn(result.accessToken, result.refreshToken, result.email);
         navigation.dispatch(StackActions.replace("LayoutTabs"));
       }
     } catch (error: any) {
@@ -100,7 +99,7 @@ export default function LoginScreen() {
       const data = await signInWithGoogle();
 
       if(data.status) {
-        await signIn(data.accessToken, data.refreshToken);
+        await signIn(data.accessToken, data.refreshToken, data.email);
         navigation.dispatch(StackActions.replace("LayoutTabs"));
       } else {
         Alert.alert("Đăng nhập thất bại", data.message);

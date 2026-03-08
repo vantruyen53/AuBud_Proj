@@ -24,11 +24,7 @@ export interface LoginPayload {
 export interface LoginResult{
   status: boolean;
   message: string;
-  user: {
-    id: string;
-    email: string;
-    role: 'user' | 'admin' | 'null';
-  };
+  email: string;
   accessToken: string;
   refreshToken: string;
   salt: string;

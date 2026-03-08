@@ -89,8 +89,10 @@ const styles = StyleSheet.create({
       justifyContent: 'space-between',
       alignItems: 'center',
       borderRadius: 16,
-      backgroundColor: '#fff', // Nền trắng để nổi bật trên modal xám
+      backgroundColor: '#fff', 
       marginBottom: 12,
+      borderColor:'#eeefef',
+      borderWidth:1
   },
   verticalDivider: {
     width: 1,
@@ -280,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#eeefef',
   },
   savingsTop: {
     flexDirection: 'row',
@@ -557,11 +559,12 @@ const styles = StyleSheet.create({
         justifyContent:'flex-start',
         alignItems:'center',
         borderRadius:12,
-        borderWidth:1,
-        borderColor:'#F1F5F9',
+        backgroundColor: '#fff',
         padding:10,
         gap:10,
         marginBottom:10,
+        borderWidth: 1,
+      borderColor: '#eeefef',
     },
     icon:{
         borderRadius:8,
