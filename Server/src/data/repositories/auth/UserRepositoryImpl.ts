@@ -73,8 +73,8 @@ export default class UserRepositoris implements IUserRepository {
             data.verified,
             data.last_login,
             data.salt,
-            data.encrypted_secret_key_user,   // ✅ đúng tên column DB
-            data.encrypted_secret_key_server, // ✅ đúng tên column DB
+            data.encrypted_secret_key_user,  
+            data.encrypted_secret_key_server,
         );
         (account as any).userName = data.user_name;
         return account;

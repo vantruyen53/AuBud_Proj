@@ -17,14 +17,9 @@ const RefreshToken = (user:any) =>{
         { expiresIn: '30d' });
     return refreshToken;
 }
-const verifyToken = (token:string, type='access') =>{
+const verifyToken = (token: string, type = 'access') => {
     const secret = type === 'access' ? ACCESS_TOKEN_SECRET : REFRESH_TOKEN_SECRET;
-    try {
-        const decoded = jwt.verify(token, secret);
-        return decoded;
-    } catch (err) {
-        console.error("Token verification failed:", err);
-        return false;
-    }
+    // Không dùng try-catch ở đây, hãy để nó tự throw lỗi của thư viện JWT
+    return jwt.verify(token, secret);
 }
 export { generateToken, RefreshToken, verifyToken };

@@ -25,8 +25,13 @@ export class WalletService implements IWalletService {
         return result;
     }
 
-    async create(target: ActionTarget, dto: any): Promise<boolean> {
-        return await this.factory.getRepo(target).create(dto);
+    async create(target: ActionTarget, dto: any, userId:string, encryptedNewBalance?:string): Promise<boolean> {
+        console.log(target)
+        console.log(dto)
+        if(encryptedNewBalance)
+            return await this.factory.getRepo(target).create(dto,userId, encryptedNewBalance);
+        else
+            return await this.factory.getRepo(target).create(dto,userId);
     }
 
     async update(target: ActionTarget, dto: any): Promise<boolean> {
@@ -52,6 +57,10 @@ export class WalletService implements IWalletService {
         }
 
         return await this.factory.getExtendedRepo(target).createHistory(dto);
+    }
+
+    async deleteTransaction(target: "saving" | "debt", dto: any): Promise<boolean> {
+        return await this.factory.getExtendedRepo(target).deleteHistory(dto);
     }
 
     async convert(dto: ConvertDTO): Promise<boolean> {

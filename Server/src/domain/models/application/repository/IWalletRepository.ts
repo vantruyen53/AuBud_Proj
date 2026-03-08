@@ -17,7 +17,7 @@ export interface IWalletRepositoryFactory {
 export interface IBaseRepository<TEntity, TCreateDTO, TUpdateDTO> {
     findAllByUserId(userId: string): Promise<TEntity[]>;
     findById(userId:string, id:string): Promise<TEntity | null>
-    create(dto: TCreateDTO): Promise<boolean>;
+    create(dto: TCreateDTO, userId:string, encryptedNewBalance?:string): Promise<boolean>;
     update(dto: TUpdateDTO): Promise<boolean>;
     delete(id: string, userId: string): Promise<boolean>;
 }
@@ -25,6 +25,7 @@ export interface IBaseRepository<TEntity, TCreateDTO, TUpdateDTO> {
 export interface IHistoryRepository<THistoryEntity, TTransactionDTO> {
     findHistory(parentId: string): Promise<THistoryEntity[]>;
     createHistory(dto: TTransactionDTO): Promise<boolean>;
+    deleteHistory(dto:any): Promise<boolean>;
 }
 // Repo có cả CRUD lẫn History thì kế thừa cả 2
 export interface IExtendedRepository<TEntity, TCreateDTO, TUpdateDTO, THistoryEntity, TTransactionDTO>

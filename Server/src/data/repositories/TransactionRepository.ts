@@ -6,7 +6,7 @@ import type {
 } from "../DTO/AppDTO.js";
 import type {
   ITransaction,
-  ServerResult,
+  ServerResult,IMonthlySummary
 } from "../../domain/entities/appEntities.js";
 import type { Pool } from "mysql2/promise";
 import crypto from "crypto";
@@ -14,10 +14,7 @@ import crypto from "crypto";
 export class TransactionRepository implements ITransactionRepository {
   constructor(private readonly pool: Pool) {}
 
-  async find(
-    userId: string,
-    query: TransactionQueryDTO,
-  ): Promise<ITransaction[]> {
+  async find(userId: string,query: TransactionQueryDTO,): Promise<ITransaction[]> {
     const { day, month, year, categoryId } = query;
 
     let sql = `
@@ -45,11 +42,13 @@ export class TransactionRepository implements ITransactionRepository {
     WHERE t.user_id = ? AND t.status = 'completed'
   `;
     const params: any[] = [userId];
-
+    // Lọc theo ngày
     if (day && month && year) {
       sql += ` AND DATE(t.created_at) = ?`;
       params.push(`${year}-${month}-${day}`);
-    } else if (month && year) {
+    } 
+    // Lọc theo tháng
+    else if (month && year) {
       sql += ` AND MONTH(t.created_at) = ? AND YEAR(t.created_at) = ?`;
       params.push(month, year);
     }
@@ -58,6 +57,7 @@ export class TransactionRepository implements ITransactionRepository {
       sql += ` AND YEAR(t.created_at) = ?`;
       params.push(year);
     }
+    // Lọc theo category
     if (categoryId) {
       sql += ` AND t.category_id = ?`;
       params.push(categoryId);
@@ -67,8 +67,62 @@ export class TransactionRepository implements ITransactionRepository {
 
     const [rows]: any = await this.pool.execute(sql, params);
 
-    // Giả lập trả về data
     return rows as ITransaction[];
+  }
+
+  async getMonthlySpendingSummary(userId: string,day: number,month: number,year: number): 
+  Promise<{ currentPeriod: IMonthlySummary[]; lastPeriod: IMonthlySummary[] }>{
+    
+    try{
+      const lastMonth = month === 1 ? 12 : month - 1;
+      const lastYear  = month === 1 ? year - 1 : year;
+
+      const sql = `
+        SELECT 
+          t.id,
+          t.amount,        
+          t.type,          
+          t.created_at AS createdAt
+        FROM transaction t
+        WHERE 
+          t.user_id = ?
+          AND t.status = 'completed'
+          AND t.type = 'sending'
+          AND (
+            (MONTH(t.created_at) = ? AND YEAR(t.created_at) = ? AND DAY(t.created_at) <= ?)
+            OR
+            (MONTH(t.created_at) = ? AND YEAR(t.created_at) = ? AND DAY(t.created_at) <= ?)
+          )
+        ORDER BY t.created_at DESC
+      `;
+
+      const params = [
+        userId,
+        month, year, day,
+        lastMonth, lastYear, day
+      ];
+
+      const [rows]: any = await this.pool.execute(sql, params);
+      const all: IMonthlySummary[] = rows
+      // Tách 2 mảng để trả về
+      const currentPeriod = all.filter(t => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() + 1 === month && d.getFullYear() === year;
+      });
+
+      const lastPeriod = all.filter(t => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() + 1 === lastMonth && d.getFullYear() === lastYear;
+      });
+
+      return { currentPeriod, lastPeriod };
+    } catch (error) {
+      console.error("Create Transaction Error:", error);
+      return {
+        currentPeriod: [],
+        lastPeriod: []
+      };
+    }
   }
 
   async create(userId: string,data: CreateTransactionDTO,newEncryptedBalance:string): Promise<ServerResult> {
@@ -110,99 +164,72 @@ export class TransactionRepository implements ITransactionRepository {
         message: "Add successfully",
       };
     } catch (error) {
-      await conn.rollback();
-      console.error("Create Transaction Error:", error);
-      return {
-        status: false,
-        message: "Add failure",
-      };
+        await conn.rollback();
+        console.error("Create Transaction Error:", error);
+        return {
+          status: false,
+          message: "Add failure",
+        };
     } finally {
       conn.release();
     }
   }
 
-  async update(
-    userId: string,
-    data: UpdateTransactionDTO,
-  ): Promise<ServerResult> {
+  async update(userId: string,data: UpdateTransactionDTO,): Promise<ServerResult> {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      // 1. Lấy thông tin giao dịch CŨ để tính toán lại số dư ví
-      const getOldTxSql = `
-      SELECT t.amount, t.wallet_id, c.type 
-      FROM transaction t
-      JOIN category c ON t.category_id = c.id
-      WHERE t.id = ? AND t.user_id = ? AND t.status = 'completed'
-    `;
-      const [oldRows]: any = await conn.execute(getOldTxSql, [data.id, userId]);
-
-      if (oldRows.length === 0) throw new Error("Transaction not found");
-      const oldTx = oldRows[0];
-
-      //Merge data cũ + data mới (data mới override data cũ nếu có)
+      
       const merged = {
-        categoryId: data.categoryId ?? oldTx.category_id,
-        amount: data.amount ?? oldTx.amount,
-        walletId: data.walletId ?? oldTx.wallet_id,
-        note: data.note ?? oldTx.note,
-        title: data.title ?? oldTx.title,
-        date: data.createdAt ?? oldTx.date,
+        id: data.id,
+        categoryId:  data.categoryId as string,
+        amount: data.amount as 'sending' | 'income',
+        type: data.type as string,
+        walletId: data.walletId as string,
+        createdAt: data.createdAt as string,
+        note: data.note ?? '',
+        title: data.title as string,
+        budgetId:data.budgetId??'',
+
+        oldWalletId:data.oldWalletId,
+        oldBalance:data.oldBalance,
+        newWalletId:data.newWalletId,
+        newBalance:data.newBalance,
       };
-
-      // 2. HOÀN TÁC (UNDO) số dư ví cũ
-      // Nếu cũ là Income -> Trừ lại tiền. Nếu cũ là Sending -> Cộng lại tiền.
-      const undoBalanceSql = `
-      UPDATE wallet SET balance = CASE 
-        WHEN ? = 'income' THEN balance - ? 
-        ELSE balance + ? 
-      END WHERE id = ? AND user_id = ?
-    `;
-      await conn.execute(undoBalanceSql, [
-        oldTx.type,
-        oldTx.amount,
-        oldTx.amount,
-        oldTx.wallet_id,
-        userId,
-      ]);
-
       // 3. CẬP NHẬT thông tin giao dịch mới vào bảng transaction
       const updateSql = `
       UPDATE transaction 
-      SET category_id = ?, amount = ?, wallet_id = ?, note = ?, title = ?, date = ?
+      SET category_id = ?, amount = ?, wallet_id = ?, note = ?, title = ?, created_at = ?
       WHERE id = ? AND user_id = ?
     `;
-      // Lưu ý: data.date ở đây nên là YYYY-MM-DD
       await conn.execute(updateSql, [
         merged.categoryId,
         merged.amount,
         merged.walletId,
         merged.note,
         merged.title,
-        merged.date,
-        data.id,
+        merged.createdAt,
+        merged.id,
         userId,
       ]);
 
-      // 4. ÁP DỤNG (APPLY) số dư ví mới
-      // Lấy type của category mới để biết cộng hay trừ
-      const [categoryRows]: any = await conn.execute(
-        `SELECT type FROM category WHERE id = ?`,
-        [merged.categoryId],
-      );
-      const newType = categoryRows[0].type;
-
-      const applyBalanceSql = `
-      UPDATE wallet SET balance = CASE 
-        WHEN ? = 'income' THEN balance + ? 
-        ELSE balance - ? 
-      END WHERE id = ? AND user_id = ?
+      //Cập nhật số lại số dư cho ví cũ
+      const backupBalanceSql = `
+      UPDATE wallet SET balance = ? WHERE id = ? AND user_id = ?
     `;
-      await conn.execute(applyBalanceSql, [
-        newType,
-        data.amount,
-        data.amount,
-        data.walletId,
+      await conn.execute(backupBalanceSql, [
+        merged.oldBalance,
+        merged.oldWalletId,
+        userId,
+      ]);
+
+      //Cập nhật số dư cho ví mới
+      const updateBalanceSql = `
+      UPDATE wallet SET balance = ? WHERE id = ? AND user_id = ?
+    `;
+      await conn.execute(backupBalanceSql, [
+        merged.newBalance,
+        merged.newWalletId,
         userId,
       ]);
 
@@ -266,6 +293,4 @@ export class TransactionRepository implements ITransactionRepository {
       conn.release();
     }
   }
-
-  // ... triển khai các hàm khác tương tự
 }

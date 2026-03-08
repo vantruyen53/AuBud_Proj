@@ -5,11 +5,12 @@ import type { ConvertDTO } from "../../../../data/DTO/AppDTO.js";
 export interface IWalletService {
     getAllByUserId(userId: string): Promise<WalletScreenEntity>;
     getById(userId: string, id:string): Promise<WalletEntity>;
-    create(target: ActionTarget, dto: any): Promise<boolean>;
+    create(target: ActionTarget, dto: any, userId:string, encryptedNewBalance?:string): Promise<boolean>;
     update(target: ActionTarget, dto: any): Promise<boolean>;
     delete(target: ActionTarget, id: string, userId: string): Promise<boolean>;
     // Mở rộng sau
     getHistory(target: 'saving' | 'debt', parentId: string): Promise<any[]>;
     createTransaction(target: 'saving' | 'debt', dto: any): Promise<boolean>;
+    deleteTransaction(target: 'saving' | 'debt', dto: any): Promise<boolean>;
     convert(dto: ConvertDTO): Promise<boolean>;
 }

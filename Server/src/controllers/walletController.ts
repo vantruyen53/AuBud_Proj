@@ -29,8 +29,12 @@ export class WalletController {
     create = async (req: any, res: any) => {
         try {
             const { actionType } = req.params;
-            const dto = req.body;
-            const result = await this.service.create(actionType as ActionTarget, dto);
+            const {walletHash, userId, encryptedNewBalance} = req.body;
+            if(encryptedNewBalance){
+                const result = await this.service.create(actionType as ActionTarget, walletHash, userId, encryptedNewBalance);
+                return res.status(200).json({ status: result });
+            }
+            const result = await this.service.create(actionType as ActionTarget, walletHash, userId);
             return res.status(200).json({ status: result });
         } catch (error: any) {
             console.error('create error:', error);
@@ -40,8 +44,9 @@ export class WalletController {
 
     update = async (req: any, res: any) => {
         try {
-            const { actionType, walletId } = req.params;
-            const dto = { ...req.body, id:walletId };
+            const { actionType } = req.params;
+            const{walletHash, userId} = req.body
+            const dto = { ...walletHash, userId };
             const result = await this.service.update(actionType as ActionTarget, dto);
             return res.status(200).json({ status: result });
         } catch (error: any) {
@@ -49,7 +54,6 @@ export class WalletController {
             return res.status(500).json({ status: false, message: error.message });
         }
     }
-
     delete = async (req: any, res: any) => {
         try {
             const { actionType, walletId } = req.params;
@@ -69,11 +73,13 @@ export class WalletController {
     // Mở rộng sau
     getHistory = async (req: any, res: any) => {
         try {
-            const { actionType, id:walletId } = req.params;
+            const { actionType, walletId } = req.params;
             const result = await this.service.getHistory(
                 actionType as 'saving' | 'debt',
                 walletId
             );
+            // console.log('======================')
+            // console.log(result)
             return res.status(200).json(result);
         } catch (error: any) {
             console.error('getHistory error:', error);
@@ -95,6 +101,25 @@ export class WalletController {
             console.error('createTransaction error:', error);
             return res.status(500).json({ status: false, message: error.message });
         }
+    }
+
+    deleteHistoryTransaction = async (req: any, res: any) => {
+        const {userId}=req.query;
+        const {wTransactionId, newBalanceHashed, paymentWalletId, encrytedNewWalletBalace}=req.body;
+        const {actionType,walletId}=req.params;
+         console.log('===================================')
+        console.log('actionType: ',actionType)
+        console.log('itemId: ', wTransactionId)
+        console.log('===================================')
+        console.log('foreign id: ',walletId)
+        console.log('newBalance: ', newBalanceHashed)
+         console.log('===================================')
+        console.log('walletId: ', paymentWalletId)
+        console.log('newBalance: ', encrytedNewWalletBalace)
+
+        const result = await this.service.deleteTransaction(actionType, {wTransactionId,walletId, newBalanceHashed, paymentWalletId,encrytedNewWalletBalace, userId})
+
+        return res.status(200).json({ status: result });
     }
 
     convert = async (req: any, res: any) => {

@@ -4,9 +4,8 @@ export class TransactionController {
 
   getTransactions=async(req: any, res: any) =>{
     try {
-      const {userId} = req.query; // Lấy từ Middleware authenticateJWT
-      const query = req.query;    // Lấy params từ URL (?month=10&year=2023)
-      
+      const {userId} = req.query; 
+      const query = req.query; 
       const result = await this.transactionService.getTransactions(userId, query);
       return res.status(200).json({
         status: true,
@@ -14,6 +13,23 @@ export class TransactionController {
         message:"Get successfully"
       });
     } catch (error) {
+      console.log('======================Error: ', error)
+      return res.status(500).json({
+        status:false,
+        data: null,
+        message: "Internal Server Error" });
+    }
+  }
+
+  getMonthlySpendingSummary=async(req: any, res: any) =>{
+    try{
+      const {userId, day, month, year} = req.query;
+      const result = await this.transactionService.getMonthlySpendingSummary(userId, 
+        parseInt(day as string),parseInt(month as string),parseInt(year as string));
+      if(result)
+        return res.status(200).json(result) 
+      return res.status(500).json('Data not possible')
+    }catch (error) {
       console.log('======================Error: ', error)
       return res.status(500).json({
         status:false,
@@ -34,7 +50,13 @@ export class TransactionController {
   }
 
   update=async (req:any, res:any)=>{
-    const result = await this.transactionService.updateTransaction
+    const { userId, ...data } = req.body;
+    const result = await this.transactionService.updateTransaction(userId, data)
+    return res.status(200).json({
+      status:result.status,
+      data: null,
+      message:result.message
+    });
   }
   
   delete=async (req: any, res: any)=>{

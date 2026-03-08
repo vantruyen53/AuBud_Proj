@@ -26,9 +26,9 @@ export function authenticateJWT(req: any, res: any, next: any) {
     const decoded = verifyToken(token);
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch (error:any) {
     return res
-      .status(403)
+      .status(401)
       .json({ message: `Invalid or expired token: ${error}` });
   }
 }
@@ -38,10 +38,6 @@ export function loginValidation(req: any, res: any, next: any) {
     if (!password || !email) {
       return res.status(400).json({ message: "All fields are required controller" });
     }
-
-    console.log("Data to server================")
-    console.log("=========Password======= ", password)
-    console.log("=========Email======= ", email)
 
 
     const isSHA256Hex = /^[a-f0-9]{64}$/.test(password);

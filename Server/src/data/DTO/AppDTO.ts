@@ -1,7 +1,7 @@
 // domain/dtos/TransactionDTO.ts
 export interface CreateTransactionDTO {
   categoryId: string;
-  amount: number;
+  amount: string;
   type: 'sending' | 'income';
   walletId: string;
   createdAt: string;
@@ -12,6 +12,10 @@ export interface CreateTransactionDTO {
 
 export interface UpdateTransactionDTO extends Partial<CreateTransactionDTO> {
   id: string;
+  oldWalletId:string,
+  oldBalance:string,
+  newWalletId:string,
+  newBalance:string,
 }
 
 // Request Query DTO (Cho hàm GET)
@@ -64,10 +68,12 @@ export interface CreateDebtDTO {
     type: 'loan_from' | 'loan_to';
     partnerName: string;     // encrypted
     totalAmount: string;     // encrypted
-    remaining: string;       // encrypted
+    remaining?: string;       // encrypted
     createdAt: string;
     status: 'active' | 'done' | 'deleted';
     actionType: 'debt';
+    paymentWalletId?:string
+
 }
 export interface CreateDebtTransactionDTO{
   id?: string,
@@ -108,4 +114,69 @@ export interface CategoryDTO{
   userId:string,
   usageCount:number,
   status:'active'
+}
+
+
+//==========================Budget=================
+export interface CreateBudgetDTO {
+  userId: string;
+  categoryId: string;
+  target: string;        // encrypted
+  date: string;          // "03/2026"
+  status: 'active';
+}
+
+export interface UpdateBudgetDTO {
+  userId: string;
+  budgetId: string;
+  target: string;        // encrypted
+}
+
+export interface DeleteBudgetDTO {
+  userId: string;
+  budgetId: string;
+}
+
+export interface GetBudgetsDTO {
+  userId: string;
+  month: string;
+  year: string;
+}
+
+//=========================WEB DATA SCRAPE============
+// Data sau khi scrape về — trước khi lưu DB
+export interface IForeignCurrencyRaw {
+  country: string;
+  foreignCurrency: string;  // tên đơn vị, ví dụ "USD"
+  rate: number;             // 1 đơn vị ngoại tệ = bao nhiêu VND (đã parse sang number)
+}
+
+export interface IGoldPriceRaw {
+  type: string;             // loại vàng, ví dụ "VÀNG SJC"
+  buyPrice: number;         // giá mua (đã parse)
+  sellPrice: number;        // giá bán (đã parse)
+}
+
+// Entity lấy từ DB trả về client
+export interface IForeignCurrency {
+  id: string;
+  country: string;
+  foreignCurrency: string;  // tên đơn vị tiền
+  rate: number;             // 1 đơn vị ngoại tệ = x VND
+  updatedAt: string;
+}
+
+export interface IGoldPrice {
+  id: string;
+  type: string;
+  buyPrice: number;
+  sellPrice: number;
+  datetime: string;
+}
+
+// Response trả về client — gộp cả 2 vào 1 lần fetch
+export interface IMarketDataResponse {
+  foreignCurrencies: IForeignCurrency[];
+  goldPrices: IGoldPrice[];
+  updatedAt: string;
 }

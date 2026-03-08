@@ -51,9 +51,10 @@ const transactionRepo = new TransactionRepository(pool);
 const transactionService = new TransactionService(transactionRepo, userRepo);
 const transactionController = new TransactionController(transactionService);
 
-router.get("/aubud/api/v1/transaction",transactionController.getTransactions);
+router.get("/aubud/api/v1/transaction",authenticateJWT,transactionController.getTransactions);
+router.get("/aubud/api/v1/summary", transactionController.getMonthlySpendingSummary)
 router.post("/aubud/api/v1/transaction",authenticateJWT,transactionController.create,);
-router.put("/aubud/api/v1/transaction",authenticateJWT,transactionController.create,);
+router.put("/aubud/api/v1/transaction",authenticateJWT,transactionController.update,);
 router.delete("/aubud/api/v1/transaction",authenticateJWT,transactionController.delete,);
 
 //=====================WALLET API=====================
@@ -64,10 +65,10 @@ import { validateActionType, validateHistoryActionType,validateWalletBody,valida
 
 const factory    = new WalletRepositoryFactory(pool);
 const service    = new WalletService(factory);
-const controller = new WalletController(service);
+const controller = new WalletController(service); 
 
 router.get("/aubud/api/v1/wallet/all/",authenticateJWT,  controller.getAll)
-router.get("/aubud/api/v1/wallet/one/",  controller.getById)
+router.get("/aubud/api/v1/wallet/one/",authenticateJWT,  controller.getById)
 router.post('/aubud/api/v1/wallet/convert/',authenticateJWT,  validateConvertBody, controller.convert);
 
 router.post("/aubud/api/v1/wallet/:actionType",authenticateJWT, validateActionType, validateWalletBody, controller.create)
@@ -76,6 +77,7 @@ router.delete("/aubud/api/v1/wallet/:actionType/:walletId",authenticateJWT, vali
 
 router.get( '/aubud/api/v1/wallet/:actionType/:walletId/history', authenticateJWT,     validateHistoryActionType, controller.getHistory);
 router.post('/aubud/api/v1/wallet/:actionType/transaction',authenticateJWT,  validateHistoryActionType, validateTransactionBody, controller.createTransaction);
+router.delete('/aubud/api/v1/wallet/:actionType/transaction/:walletId',authenticateJWT,  validateHistoryActionType, controller.deleteHistoryTransaction);
 
 //=====================CATEGORY API=====================
 import { CategoryController } from "../controllers/categoryController.js";
@@ -92,5 +94,26 @@ router.get("/aubud/api/v1/category/suggested/:userId",authenticateJWT, categoryC
 router.put("/aubud/api/v1/category/",authenticateJWT, categoryController.updateCategory)
 router.post("/aubud/api/v1/category/",authenticateJWT, categoryController.createCategory)
 router.delete("/aubud/api/v1/category/:categoryId",authenticateJWT, categoryController.deleteCategory)
+
+
+//=====================BUDGET API=====================
+import { BudgetController } from "../controllers/BudgetController.js";
+import { BudgetService } from "../services/applicationService/BudgetService.js";
+import { BudgetRepository } from "../data/repositories/BudgetRepoImpl.js";
+const budgetController = new BudgetController(new BudgetService(new BudgetRepository(pool)));
+
+router.get   ('/aubud/api/v1/budget/all', authenticateJWT, budgetController.getBudgets);
+router.post  ('/aubud/api/v1/budget/',    authenticateJWT, budgetController.createBudget);
+router.put   ('/aubud/api/v1/budget/:id', authenticateJWT, budgetController.updateBudget);
+router.delete('/aubud/api/v1/budget/:id', authenticateJWT, budgetController.deleteBudget);
+
+//=====================MARKET API=====================
+import { MarketService } from "../services/applicationService/WebDataScrapService.js";
+import { MarketController } from "../controllers/webDataScrapeController.js";
+
+const marketService    = new MarketService(pool);
+const marketController = new MarketController(marketService);
+
+router.get('/aubud/api/v1/market', authenticateJWT, marketController.getMarketData)
 
 export default router;

@@ -32,14 +32,14 @@ export class SavingRepository implements ISavingRepository {
             return rows[0] as SavingEntity;
     }
 
-    async create(dto: CreateSavingDTO): Promise<boolean> {
+    async create(dto: CreateSavingDTO, userId:string): Promise<boolean> {
         const sql = `
             INSERT INTO savings_book (id, user_id, name, balance, target, create_at, last_access, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const id = crypto.randomUUID();
         const [result] = await this.pool.execute(sql, [
-            id, dto.userId, dto.name, dto.balance, dto.target,
+            id, userId, dto.name, dto.balance, dto.target,
             dto.createdAt, dto.createdAt, dto.status
         ]);
         return (result as any).affectedRows > 0;
@@ -68,21 +68,22 @@ export class SavingRepository implements ISavingRepository {
 
     async findHistory(savingId: string): Promise<SavingHistoryEntity[]> {
         const sql = `
-            SELECT sh.id, w.name as wallet_name, sh.amount,
-                   sh.create_at, sh.note, sh.saving_book_id
+            SELECT sh.id, sh.wallet_id, w.name as wallet_name, sh.amount,
+                   sh.create_at AS createdAt, sh.note, sh.saving_book_id
             FROM savings_history sh
             LEFT JOIN wallet w ON sh.wallet_id = w.id
-            WHERE sh.saving_book_id = ?
+            WHERE sh.saving_book_id = ? AND type != 'deleted'
             ORDER BY sh.create_at DESC
         `;
         const [rows] = await this.pool.execute<RowDataPacket[]>(sql, [savingId]);
         return rows.map(r => ({
-            id:         r.id,
+            id:         r.id, 
+            walletId:   r.wallet_id,
             walletName: r.wallet_name,
             amount:     r.amount,
-            createdAt:  r.create_at,
+            createdAt:  r.createdAt,
             note:       r.note,
-            savingId:   r.saving_book_id,
+            foreignId:  r.saving_book_id,
         }));
     }
 
@@ -111,6 +112,35 @@ export class SavingRepository implements ISavingRepository {
             await conn.commit();
 
             return (result as any).affectedRows > 0;
+        }catch (error) {
+            await conn.rollback();
+            console.error("Create Transaction Error:", error);
+            return false;
+        } finally {
+            conn.release();
+        }
+    }
+
+    async deleteHistory(dto: any): Promise<boolean> {
+        const conn = await this.pool.getConnection();
+        try{
+            await conn.beginTransaction();
+
+            const deleteSql = `UPDATE savings_history SET type = ? where id = ? and saving_book_id = ? `
+            const [dResult] = await this.pool.execute(deleteSql, ['deleted', dto.wTransactionId, dto.walletId])
+
+            const updateSql = `UPDATE savings_book SET balance = ? where id = ? AND user_id = ? `
+            const [uResult] = await this.pool.execute(updateSql, [dto.newBalanceHashed, dto.walletId, dto.userId])
+
+            //bakcup balance for wallet that used for payment, bank or cash,...
+            const backupBalanceSq = `UPDATE wallet SET balance = ? where id = ? AND user_id = ? `
+            const [bResult] = await this.pool.execute(backupBalanceSq, [dto.encrytedNewWalletBalace, dto.paymentWalletId, dto.userId])
+
+            if((dResult as any).affectedRows > 0 && (uResult as any).affectedRows > 0 && (bResult as any).affectedRows > 0 )
+                return true
+            else
+                return false
+
         }catch (error) {
             await conn.rollback();
             console.error("Create Transaction Error:", error);

@@ -9,5 +9,6 @@ export interface ITransactionRepository {
   
   // Hàm tìm kiếm linh hoạt dựa trên query params
   find(userId: string, query: TransactionQueryDTO): Promise<ITransaction[]>;
-  // findById(userId: string, id: string): Promise<ITransaction | null>;
+  getMonthlySpendingSummary(userId: string,day: number,month: number,year: number): 
+  Promise<{ currentPeriod: any[]; lastPeriod: any[] }>
 }

@@ -16,15 +16,22 @@ export interface ICategory {
 
 export interface ITransaction {
   id: string;
-  userId: string; // Quan trọng để lọc dữ liệu theo người dùng
+  userId: string; 
   categoryId: string;
-  category?: ICategory; // Populate khi trả về client
+  category?: ICategory;
   amount: number;
   type: 'sending' | 'income';
   wallet: string;
   date: string; // YYYY-MM-DD
   note: string;
   title: string;
+}
+
+export interface IMonthlySummary{
+  id:string,
+  type:string,
+  amount:string,
+  createdAt:string,
 }
 
 //==========================WALLET=================
@@ -45,24 +52,27 @@ export interface SavingHistoryEntity{
     amount:number,
     createdAt:string,
     note:string,
-    savingId:string,
+    walletId:string, //bank or cash ... to repay money
+    foreignId:string, //debt_id
 }
 export interface DebtEntity {
     id: string;
-    name: string;          // encrypted
-    type: 'loan_from' | 'loan_to';  // không encrypt
-    partnerName: string;   // encrypted
-    totalAmount: string;   // encrypted
-    remaining: string;     // encrypted
+    name: string;          
+    type: 'loan_from' | 'loan_to';
+    partnerName: string;   
+    totalAmount: string;   
+    remaining: string;     
     createdAt: string;
 }
 export interface DebtHistoryEntity{
     id:string,
-    debtId:string,
-    type:'loan_from'|'loan_to', 
+    foreignId:string, //saving_book_id
     amount:number,
     createdAt:string,
-    note:"string"
+    note:"string",
+    type:'repay_from'|'repay_to'
+    walletId:string, //bank or cash to repay money
+    walletName:string,
 }
 export interface GroupFundEntity {
     id: string;
@@ -86,4 +96,26 @@ export interface CategoryEntity{
   iconColor: string,
   userId?: string;
   isDefault?: boolean;
+}
+
+
+//==========================Budget=================
+// Raw transaction gắn kèm theo budget
+export interface BudgetTransactionEntity {
+  id: string;
+  amount: string;        // encrypted
+}
+
+// Budget entity trả về client
+export interface BudgetEntity {
+  id: string;
+  amountLimit: string;   // encrypted
+  date: string;          // "2026-03-01"
+  status: string;
+  categoryId: string;
+  categoryName: string;
+  iconName: string;
+  iconColor: string;
+  categoryType: string;
+  transactions: BudgetTransactionEntity[];
 }

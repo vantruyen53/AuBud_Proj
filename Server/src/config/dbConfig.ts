@@ -11,6 +11,8 @@ const poolOptions: PoolOptions = {
   database: process.env.DB_NAME ?? '',
   waitForConnections: true,
   connectionLimit: 10,
+  timezone: '+07:00',
+  dateStrings: true,
 };
 
 const pool = mysql.createPool(poolOptions);

@@ -32,7 +32,7 @@ export function validateHistoryActionType(req: Request, res: Response, next: Nex
 // Validate body theo actionType
 export function validateWalletBody(req: Request, res: Response, next: NextFunction) {
     const { actionType } = req.params;
-    const body = req.body;
+    const {walletHash} = req.body;
     const { userId } = req.query;
 
     // userId luôn bắt buộc
@@ -44,10 +44,10 @@ export function validateWalletBody(req: Request, res: Response, next: NextFuncti
     const requiredFields: Record<string, string[]> = {
         wallet: ['name', 'balance', 'createdAt'],
         saving: ['name', 'target', 'createdAt'],
-        debt:   ['name', 'type', 'partnerName', 'totalAmount','createdAt'],
+        debt:   ['name', 'type', 'partnerName', 'totalAmount','createdAt','paymentWalletId'],
     };
 
-    const missing = requiredFields[actionType as ActionTarget]?.filter(f => !body[f]) ?? [];
+    const missing = requiredFields[actionType as ActionTarget]?.filter(f => !walletHash[f]) ?? [];
     if (missing.length > 0) {
         return res.status(400).json({ 
             status: false, 

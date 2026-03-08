@@ -15,6 +15,10 @@ export class TransactionService {
     return await this.transactionRepo.find(userId, query);
   }
 
+  async  getMonthlySpendingSummary(userId: string,day: number,month: number,year: number){
+    return await this.transactionRepo.getMonthlySpendingSummary(userId, day, month, year)
+  }
+
   async addTransaction(userId: string, data: any, newEncryptedBalance: string) {
     // Ví dụ logic: Kiểm tra số dư ví hoặc tổng ngân sách đã chi trước  khi cho phép chi tiêu (nếu cần)
     return await this.transactionRepo.create(userId, data,newEncryptedBalance);
