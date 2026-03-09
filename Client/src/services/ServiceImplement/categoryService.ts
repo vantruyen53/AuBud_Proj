@@ -11,7 +11,7 @@ export class CategoryService implements ICategoryService{
     private async _getRequest(endpoint?: string, params?: object): Promise<CategoryDTO[] | null> {
         try {
             // đổi fetch → apiFetch, bỏ headers
-            const res = await apiFetch(`/aubud/api/v1/category/${endpoint}/${this.user.id}`);
+            const res = await apiFetch(`/category/${endpoint}/${this.user.id}`);
 
             if (res.status !== 200) {
                 throw new Error(res.statusText || "Something went wrong");
@@ -28,8 +28,8 @@ export class CategoryService implements ICategoryService{
     private async _mutationRequest(method: "POST" | "PUT" | "DELETE", data?: any, categoryId?: string): Promise<ServiceResponse<any>> {
         try {
             const url = method === "DELETE" && categoryId
-                ? `/aubud/api/v1/category/${categoryId}`
-                : `/aubud/api/v1/category`;
+                ? `/category/${categoryId}`
+                : `/category`;
 
             // đổi fetch → apiFetch, bỏ headers
             const res = await apiFetch(url, {

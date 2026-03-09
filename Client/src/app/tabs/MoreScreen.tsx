@@ -22,6 +22,8 @@ import { Colors, Fonts } from "@/src/constants/theme";
 import { formatCurrency } from "@/src/utils/format";
 import { COUNTRY_FLAG_MAP } from "@/src/constants/COUNTRY_FLAG_MAP";
 import { MarketService } from "@/src/services/ServiceImplement/marketService";
+ import { useNotificationStore } from "../../store/application/NotificationStore";
+ import { socketService } from "../../services/Socketservice";
 
 interface IUser{
   name:string,
@@ -274,10 +276,10 @@ export default function MoreScreen() {
               <Text style={gStyles.brandText} numberOfLines={1}>{item.type}</Text>
             </View>
             <Text style={[gStyles.buyText, { flex: 1, textAlign: 'center' }]}>
-              {(item.buyPrice / 1000).toLocaleString('vi-VN')}K
+              {(item.buyPrice).toLocaleString('vi-VN')}K
             </Text>
             <Text style={[gStyles.sellText, { flex: 1, textAlign: 'right' }]}>
-              {(item.sellPrice / 1000).toLocaleString('vi-VN')}K
+              {(item.sellPrice).toLocaleString('vi-VN')}K
             </Text>
           </View>
         ))}
@@ -297,6 +299,8 @@ export default function MoreScreen() {
         style: "destructive",
         onPress: async () => {
           await signOut(); // ← đợi clear xong
+          socketService.disconnect();
+          useNotificationStore.getState().clearAll();
           navigation.dispatch(StackActions.replace("LayoutAuth"));
         },
       },

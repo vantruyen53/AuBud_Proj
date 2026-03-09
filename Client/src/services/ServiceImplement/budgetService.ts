@@ -10,8 +10,8 @@ export class BudgetService implements  IBudgetService{
   private async _mutilRequest(method: "POST" | "PUT" | "DELETE", data?: any, budgetId?: string): Promise<{success: boolean, message?: string}> {
     try {
         const url = (method === "PUT" || method === "DELETE") && budgetId
-            ? `/aubud/api/v1/budget/${budgetId}`
-            : `/aubud/api/v1/budget/`;
+            ? `/budget/${budgetId}`
+            : `/budget/`;
 
         let body: Record<string, any> = { userId: this.user.id };
         if (method === "POST" && data) {
@@ -44,7 +44,7 @@ export class BudgetService implements  IBudgetService{
           const queryString = new URLSearchParams({ month, year, userId: this.user.id }).toString();
 
           // đổi fetch → apiFetch, bỏ headers
-          const res = await apiFetch(`/aubud/api/v1/budget/all?${queryString}`);
+          const res = await apiFetch(`/budget/all?${queryString}`);
 
           const json = await res.json();
           return json ?? [];

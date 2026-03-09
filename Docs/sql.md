@@ -15,8 +15,10 @@ CREATE TABLE IF NOT EXISTS `account` (
 `status` VARCHAR(255) NOT NULL,
 `last_login` DATETIME NOT NULL,
 `verified` BOOLEAN NOT NULL
-`public_key` TEXT NOT NULL,
-`encryptedPrivateKey` TEXT NOT NULL,
+`salt` VARCHAR(255) NOT NULL,
+`encrypted_secret_key_user` TEXT --này để mã hóa khóa ase dùng trong mã hóa và giải mã dữ liệu cá nhân
+`encrypted_secret_key_server`, TEXT --này để tạo mới khóa cho client khi client quên mật khẩu
+`google_id` TEXT,
 );
 
 CREATE TABLE IF NOT EXISTS `token` (

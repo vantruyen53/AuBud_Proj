@@ -18,13 +18,7 @@ export class TokenService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    await this.tokenRepo.saveToken(
-      tokenId,
-      tokenHash,
-      user.id,
-      expiresAt,
-      deviceInfo,
-    );
+    await this.tokenRepo.upsertToken(tokenId, tokenHash, user.id, expiresAt, deviceInfo);
 
     return { accessToken, refreshToken };
   }

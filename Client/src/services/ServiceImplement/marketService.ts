@@ -10,7 +10,7 @@ export class MarketService implements IMarketService {
   async getMarketData(): Promise<IMarketDataResponse | null> {
     try {
           // đổi fetch → apiFetch, bỏ headers
-          const res = await apiFetch(`/aubud/api/v1/market`);
+          const res = await apiFetch(`/market`);
 
           if (!res.ok) return null;
 

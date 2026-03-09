@@ -15,6 +15,7 @@ import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-
 import { Colors, mainColor, linearGradient } from "@/src/constants/theme";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useNavigation, useFocusEffect  } from "@react-navigation/native";
+import { Bell } from "lucide-react-native";
 
 //Import custome file
 import { styles } from "../../assets/styles/homeStyle";
@@ -31,6 +32,11 @@ import { totalSenIn } from "@/src/utils/helper";
 import { ITransactionItem } from "@/src/models/interface/Entities";
 import { TransactionApp } from "@/src/store/application/TransactionApp";
 import {createIconAcc} from '@/src/utils/helper';
+import { useNotificationStore } from "../../store/application/NotificationStore";
+ import { useNotification } from "../../hooks/useNotification";
+ import { socketService } from "../../services/Socketservice";
+ import { setSocketReconnectCallback } from "@/src/services/auth/apiService";
+ import { usePushNotification } from "@/src/hooks/usePushNotification";
 
 export default function HomeScreen() {
   const y = new Date().getFullYear();
@@ -38,6 +44,7 @@ export default function HomeScreen() {
   const d = new Date().getDate();
   const { isShowData, toggleShowData, id, userName, accessToken } =useProvider();
   const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   // 1. State quản lý dữ liệu gốc
   const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
@@ -61,6 +68,21 @@ export default function HomeScreen() {
 
   const [trigger, setTrigger]=useState(0)
 
+  // ✅ Connect socket 1 lần duy nhất khi có accessToken
+  useEffect(() => {
+    if (accessToken) socketService.connect(accessToken);
+
+    setSocketReconnectCallback((newToken: string) => {
+      socketService.disconnect();
+      socketService.connect(newToken);
+      usePushNotification(accessToken);
+    });
+
+    return () => socketService.disconnect(); // chỉ disconnect khi unmount HomeScreen
+  }, [accessToken]);
+
+   useNotification(accessToken);
+
   // 1. Lấy dữ liệu tổng quan cho summary card và mảng gốc để filter "transaction today"
   useFocusEffect(
     useCallback(() => {
@@ -78,7 +100,7 @@ export default function HomeScreen() {
         setIsLoading(false);
       };
       fetchData();
-    }, [m, y,trigger])
+    }, [m, y,trigger, accessToken])
   )
 
   // 2. TÍNH TOÁN "HÔM NAY": Dùng useMemo để không tính lại thừa
@@ -351,6 +373,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.topRight}>
+              {/* History  */}
               <TouchableOpacity
                 style={styles.historyButton}
                 onPress={() => navigation.navigate("history")}
@@ -358,16 +381,22 @@ export default function HomeScreen() {
                 <MaterialIcons name="history-edu" size={22} color="#fff" />
                 <Text style={styles.historyText}>History</Text>
               </TouchableOpacity>
+
+              {/* Notification  */}
               <TouchableOpacity
                 style={styles.notification}
                 onPress={() => navigation.navigate('notifacation')}
+                activeOpacity={0.7}
               >
-                <MaterialDesignIcons
-                  name="bell"
-                  color="#FFF"
-                  size={22}
-                />
-                <View style={styles.noteText}></View>
+                 <Bell size={22} color="#fff" />
+
+                 {unreadCount > 0 && (
+                    <View style={styles.noteText}>
+                      <Text style={styles.badgeText}>
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </Text>
+                    </View>
+                  )}
               </TouchableOpacity>
             </View>
           </SafeAreaView>

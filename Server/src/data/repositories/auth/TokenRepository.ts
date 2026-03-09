@@ -47,4 +47,48 @@ export default class TokenRepositoryImpl implements ITokenRepository {
     const [rows] = await pool.execute<RowDataPacket[]>(sql, [userId]);
     return rows[0]?.device_info ?? null;
   }
+
+  // TokenRepository
+  async upsertToken(id: string, tokenHash: string, userId: string, expiresAt: Date, deviceInfo: string): Promise<void> {
+  const dateTime = new Date();
+  const sql = `
+    INSERT INTO token (id, token_hash, user_id, expires_at, device_info, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      id         = VALUES(id),
+      token_hash = VALUES(token_hash),
+      expires_at = VALUES(expires_at),
+      created_at = ?
+  `;
+  await pool.execute(sql, [id, tokenHash, userId, expiresAt, deviceInfo, dateTime, dateTime]);
+}
+
+  /**
+   * Cập nhật push_token cho thiết bị của user.
+   * Match theo user_id + device_info vì 1 thiết bị = 1 row.
+   */
+  async updatePushToken(userId: string, deviceInfo: string, pushToken: string): Promise<void> {
+    const sql = `
+      UPDATE token
+      SET push_token = ?
+      WHERE user_id = ? AND device_info = ?
+    `;
+    await pool.execute(sql, [pushToken, userId, deviceInfo]);
+  }
+
+  /**
+   * Lấy tất cả push token còn hạn của user.
+   * Dùng khi cần gửi push notification đến tất cả thiết bị của user.
+   */
+  async getPushTokensByUserId(userId: string): Promise<string[]> {
+    const sql = `
+      SELECT push_token
+      FROM token
+      WHERE user_id = ?
+        AND push_token IS NOT NULL
+        AND expires_at > NOW()
+    `;
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, [userId]);
+    return rows.map((r) => r.push_token as string);
+  }
 }

@@ -64,6 +64,7 @@ export class TransactionApp{
         }
 
         const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
+        console.log(secretKey)
         const decryptedData = await Promise.all(data.map(async (w) => {
             try {
                 return await this._decryptData(w, secretKey);

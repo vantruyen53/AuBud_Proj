@@ -24,6 +24,7 @@ import {
 import { passwordRegex, validateEmail } from "@/src/utils/helper";
 import { useProvider } from "@/src/hooks/useProvider";
 import * as SecureStore from "expo-secure-store";
+import { socketService } from "../../services/Socketservice";
 
 function validateForm(
   email: string,
@@ -67,6 +68,7 @@ export default function LoginScreen() {
 
       if (result.status) {
         await signIn(result.accessToken, result.refreshToken, result.email);
+        socketService.connect(result.accessToken); 
         navigation.dispatch(StackActions.replace("LayoutTabs"));
       }
     } catch (error: any) {
@@ -98,15 +100,16 @@ export default function LoginScreen() {
       console.log("Bắt đầu đăng nhập với Google...");
       const data = await signInWithGoogle();
 
+      console.log('Login hoàn tất: ', data)
       if(data.status) {
-        await signIn(data.accessToken, data.refreshToken, data.email);
+        await signIn(data.accessToken, data.refreshToken, data.user.email);
         navigation.dispatch(StackActions.replace("LayoutTabs"));
       } else {
         Alert.alert("Đăng nhập thất bại", data.message);
       }
 
     } catch (error: any) {
-      Alert.alert("Lỗi", error.message ?? "Đã có lỗi xảy ra");
+      Alert.alert("Không thể đăng nhập", error.message ?? "Đã có lỗi xảy ra");
     } finally {
       setLoading(false);
     }

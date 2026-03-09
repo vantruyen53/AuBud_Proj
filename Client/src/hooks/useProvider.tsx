@@ -3,7 +3,8 @@ import AppContextType from "../models/types/appContext";
 import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 import { SECRET_KEY_STORE, API_URL } from "../constants/securityContants";
-import { setSessionExpiredCallback } from "../services/auth/apiService";
+import { setSessionExpiredCallback, setTokenRefreshedCallback } from "../services/auth/apiService";
+
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
@@ -39,25 +40,33 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
   const [isShowData, setIsShowData] = useState(true)
 
   useEffect(() => {
+    // Chạy một lần khi app khởi động — kiểm tra token còn hợp lệ không
+    checkAuthOnAppStart();
+    
     // Đăng ký callback một lần khi app khởi động
     setSessionExpiredCallback(() => {
       clearAuth(false);
     });
-  }, []);
 
-  // Chạy một lần khi app khởi động — kiểm tra token còn hợp lệ không
-  useEffect(() => {
-    checkAuthOnAppStart();
+    setTokenRefreshedCallback((newToken: string) => {
+      const decoded = jwtDecode<JwtPayload>(newToken);
+      setAccessToken(newToken);
+      setId(decoded.id);
+      setuserName(decoded.userName);
+      setRole(decoded.role);
+    });
   }, []);
 
   const checkAuthOnAppStart = async () => {
     try {
       const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!storedToken || isTokenExpired(storedToken)) {
+        console.log('=====Token đã hết hạn ============')
         // Không có token hoặc đã hết hạn → thử refresh
         const storedRefresh = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 
         if (storedRefresh) {
+          console.log('===========Bắt đầu refresh lại token===============')
           await tryRefreshToken(storedRefresh);
         } else {
           // Không có gì cả → về login
@@ -81,20 +90,23 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
 
   const tryRefreshToken = async (storedRefresh: string) => {
     try {
+        console.log('===============Try refresh token========')
         const response = await fetch(`${API_URL}/auth/refresh-token`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refreshToken: storedRefresh }),
         });
 
+        console.log("[tryRefresh] status:", response.status);
+
         if (!response.ok) throw new Error("Refresh thất bại");
 
-        console.log('===============Try refresh token========')
         const data = await response.json();
-        console.log('Status: ',data?'succees':'fail')
-        console.log('Data:', data)
+        console.log("[tryRefresh] data keys:", Object.keys(data));
+
         await signIn(data.accessToken, data.refreshToken, data.user.email);
-    } catch {
+    } catch(e)  {
+        console.log("[tryRefresh] error:", e);
         await clearAuth(false); // ← false: giữ lại secretKey
     }
 };

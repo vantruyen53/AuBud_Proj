@@ -1,4 +1,6 @@
 import type { ITransactionRepository } from "../../domain/models/application/repository/ITransactionRepo.js";
+import type { IUserRepository } from "../../domain/models/auth/IUserRepository.js";
+import UserRepositoris from "./auth/UserRepositoryImpl.js";
 import type {
   CreateTransactionDTO,
   TransactionQueryDTO,
@@ -12,7 +14,10 @@ import type { Pool } from "mysql2/promise";
 import crypto from "crypto";
 
 export class TransactionRepository implements ITransactionRepository {
-  constructor(private readonly pool: Pool) {}
+  private userRepo: IUserRepository
+  constructor(private readonly pool: Pool) {
+    this.userRepo = new UserRepositoris(pool)
+  }
 
   async find(userId: string,query: TransactionQueryDTO,): Promise<ITransaction[]> {
     const { day, month, year, categoryId } = query;
@@ -152,11 +157,14 @@ export class TransactionRepository implements ITransactionRepository {
           UPDATE wallet SET balance = ? WHERE id = ? AND user_id = ?`;
       await conn.execute(updateBalanceSql, [newEncryptedBalance,data.walletId,userId]);
 
-      const increaseCountCategorySql = `
+      const increaseCountCategorySql = ` 
           UPDATE category SET usageCount = usageCount + 1 
           WHERE id = ?
         `;
       await conn.execute(increaseCountCategorySql, [data.categoryId]);
+
+
+      await this.userRepo.updateLastInput(userId, conn);
 
       await conn.commit();
       return {

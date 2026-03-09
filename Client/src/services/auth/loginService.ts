@@ -7,6 +7,7 @@ import * as ExpoCrypto from "expo-crypto";
 export async function postLogin( payload: LoginPayload): Promise<LoginResult> {
   const { email, password } = payload;
 
+  console.log(payload)
   const passwordHash = await ExpoCrypto.digestStringAsync(
     ExpoCrypto.CryptoDigestAlgorithm.SHA256,
     password,
@@ -34,7 +35,7 @@ export async function loginService(payload: LoginPayload): Promise<any> {
     try {
         const result = await postLogin(payload);
         console.log('====1. postLogin result.status:', result.status);
-        console.log('====2. postLogin result.email:', result.email);
+        console.log('====2. postLogin result.email:', result.user.email);
         console.log('====2. result.salt:', result.salt ? 'có' : 'NULL');
         console.log('====3. result.encryptedSecretKey_user:', result.encryptedSecretKey_user ? 'có' : 'NULL');
 
@@ -65,7 +66,7 @@ export async function loginService(payload: LoginPayload): Promise<any> {
         return {
             status:       result.status,
             message:      result.message,
-            email:        result.email,
+            email:        result.user.email,
             accessToken:  result.accessToken,
             refreshToken: result.refreshToken,
         };

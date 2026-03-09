@@ -105,7 +105,6 @@ export interface BudgetTransactionEntity {
   id: string;
   amount: string;        // encrypted
 }
-
 // Budget entity trả về client
 export interface BudgetEntity {
   id: string;
@@ -118,4 +117,17 @@ export interface BudgetEntity {
   iconColor: string;
   categoryType: string;
   transactions: BudgetTransactionEntity[];
+}
+
+
+//==========================NOTIFACATION=================
+export interface INotification {
+  id: string;
+  userId: string;       // for_user_id
+  type: string;
+  title: string;
+  description: string;  // contents
+  time: string;         // created_at
+  isRead: boolean;
+  metadata?: Record<string, unknown> | null;
 }

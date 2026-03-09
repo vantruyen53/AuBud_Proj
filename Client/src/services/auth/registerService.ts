@@ -4,15 +4,16 @@ import { buildKeyBundleOnRegister } from "@/src/utils/security";
 import * as SecureStore from "expo-secure-store";
 import * as ExpoCrypto from "expo-crypto";
 import { InteractionManager } from "react-native";
+import { apiFetch } from "./apiService";
 
 // STEP 1 — Lấy Server Public Key
 export async function fetchServerPublicKey(): Promise<string> {
-  const response = await fetch(`${API_URL}/auth/public-key`);
+  const res = await apiFetch(`/auth/public-key`);
 
-  if (!response.ok) {
+  if (!res.ok) {
     throw new Error("Không thể lấy public key từ server");
   }
-  const data = await response.json();
+  const data = await res.json();
   if (!data.publicKey) {
     throw new Error("Server trả về public key không hợp lệ");
   }

@@ -11,6 +11,7 @@ import OTPRepository from "../data/repositories/auth/OTPRepositoryImpl.js";
 import TokenRepositoryImpl from "../data/repositories/auth/TokenRepository.js";
 import { TokenService } from "../services/tokenService.js";
 import {registerValidation,loginValidation,verifyOTP,authenticateJWT,emailValidation,passwordValidation,} from "../middlewares/authMiddleware.js";
+import passport from '../config/passport.js';
 
 const userRepo = new UserRepositoryImpl(pool);
 const otpRepo = new OTPRepository();
@@ -40,7 +41,18 @@ router.post("/aubud/api/v1/auth/logout", authController.logOut);
 router.post("/aubud/api/v1/auth/verify-email",emailValidation,authController.verifyEmail,);
 router.post("/aubud/api/v1/auth/reset-password",passwordValidation,authController.changePassWord,);
 router.post("/aubud/api/v1/auth/refresh-token", authController.refreshToken);
-router.post("/auth/google", authController.loginWithGG); // Not yet tested
+router.get("/aubud/api/v1/auth/google",passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  })
+);
+router.get(
+  "/aubud/api/v1/auth/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
+  authController.googleCallback
+);
+// route
+router.post("/aubud/api/v1/auth/google/keybundle", authenticateJWT, authController.uploadKeyBundle);
 
 //=====================TRANSACTION API=====================
 import { TransactionController } from "../controllers/transactionController.js";
@@ -115,5 +127,19 @@ const marketService    = new MarketService(pool);
 const marketController = new MarketController(marketService);
 
 router.get('/aubud/api/v1/market', authenticateJWT, marketController.getMarketData)
+
+
+//=====================NOTIFACTION API=====================
+import { NotificationController } from "../controllers/notificationController.js";
+const notificationController = new NotificationController();
+
+router.get("/aubud/api/v1/notifications", authenticateJWT, notificationController.getAll.bind(notificationController))
+router.patch("/aubud/api/v1/notifications/read-all", authenticateJWT, notificationController.markAllAsRead.bind(notificationController))
+
+
+//=====================CATEGORY API=====================
+import { DeviceController } from "../controllers/DeviceController.js";
+const deviceController = new DeviceController();
+router.post("/aubud/api/v1/device/push-token",authenticateJWT,deviceController.savePushToken.bind(deviceController));
 
 export default router;

@@ -15,7 +15,7 @@ export class TransactionService implements ITransactionService {
             }).toString();
 
             // đổi fetch → apiFetch, bỏ headers
-            const res = await apiFetch(`/aubud/api/v1/transaction?${queryString}`);
+            const res = await apiFetch(`/transaction?${queryString}`);
 
             if (!res.ok) return null;
             const json = await res.json();
@@ -40,7 +40,7 @@ export class TransactionService implements ITransactionService {
             }
 
             // đổi fetch → apiFetch, bỏ headers
-            const res = await apiFetch(`/aubud/api/v1/transaction${queryString}`, {
+            const res = await apiFetch(`/transaction${queryString}`, {
                 method,
                 body
             });

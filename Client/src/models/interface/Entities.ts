@@ -144,3 +144,15 @@ export interface IMarketDataResponse {
   goldPrices: IGoldPrice[];
   updatedAt: string;
 }
+
+
+
+//=========================NOTIFACATIONS============
+export interface INotification{
+    id:string,
+    type:string,
+    title:string,
+    description:string,
+    time:string,
+    isRead:boolean,
+}

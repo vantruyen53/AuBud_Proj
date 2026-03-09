@@ -1,10 +1,11 @@
-import { User, Account, } from '../../entities/authEntities.js';
+import { User, Account, UserRefresh} from '../../entities/authEntities.js';
 import { ServerResult } from '../../entities/appEntities.js';
+import { type PoolConnection } from 'mysql2/promise';
 
 export interface IUserRepository {
   create(user: User, account: Account): Promise<void>;
   findByEmail(email: string, password?:string): Promise<any | null>;
-  findById(id: string): Promise<User | null>;
+  findById(id: string): Promise<UserRefresh | null>;
   getEncryptedSecretKeyServerByEmail(email: string): Promise<string | null>;
   updateAccountStatus(id: string, status: string): Promise<void>;
   verifyAcc(email:string):Promise<boolean>;
@@ -14,5 +15,9 @@ export interface IUserRepository {
     newEncryptedSecretKeyUser?: string, newSalt?: string): Promise<ServerResult>;
   findByGoogleId(googleId: string): Promise<Account | null>;
   linkGoogleId(accountId: string, googleId: string): Promise<void>
+  updateKeyBundle(userId: string,salt: string,encryptedSecretKey_user: string,encryptedSecretKey_server: string,): Promise<void> 
   checkUserRole(userId: string): Promise<string | null>;
+  updateLastLogin(userId:string, ):Promise<boolean>;
+  updateLastInput(userId:string, conn?: PoolConnection):Promise<void>;
+  getUsersWithNoInputToday(offset: number, limit: number): Promise<{ userId: string; email: string; userName: string }[]>
 }

@@ -12,7 +12,7 @@ export class WalletService implements IWalleetService {
         try {
             const queryString = "?" + new URLSearchParams({ userId: this.user.id }).toString();
 
-            let url = `/aubud/api/v1/wallet`;
+            let url = `/wallet`;
             if (actionType) url += `/${actionType}`;
             if (isTransaction) url += '/transaction';
             if (walletId) url += `/${walletId}`;
@@ -48,7 +48,7 @@ export class WalletService implements IWalleetService {
             const queryObj: any = { ...params, userId: this.user.id };
             const queryString = "?" + new URLSearchParams(queryObj).toString();
 
-            let url = `/aubud/api/v1/wallet`;
+            let url = `/wallet`;
             if (endpoint === "history") url += `/${actionType}/${walletId}`;
             url += `/${endpoint}${queryString}`;
 

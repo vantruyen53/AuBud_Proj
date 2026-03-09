@@ -8,11 +8,20 @@ export class User {
   ) {}
 }
 
+export class UserRefresh {
+  constructor(
+    public id: string,
+    public userName: string,
+    public email: string,
+    public role: string
+  ) {}
+}
+
 export class Login{
   constructor(
     public status: boolean,
     public message:string,
-    public email: string,
+    public user:{id:string, email:string, role:string},
     public accessToken: string,
     public refreshToken: string,
     public salt: string,

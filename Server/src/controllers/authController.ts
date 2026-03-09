@@ -195,9 +195,11 @@ export class AuthController {
     const { refreshToken } = req.body;
     const deviceInfo = req.headers['user-agent'] || "Unknown Device";
 
-    const decoded = verifyToken(refreshToken, "refresh") as unknown as DecodedToken;
-    if (!decoded) {
-        return res.status(403).json({ message: "Invalid refresh token" });
+    let decoded: DecodedToken;
+    try {
+      decoded = verifyToken(refreshToken, "refresh") as unknown as DecodedToken;
+    } catch {
+      return res.status(403).json({ message: "Invalid or expired refresh token" });
     }
 
     const isValidInDb = await this.tokenService.validateRefreshToken(refreshToken);
@@ -212,44 +214,75 @@ export class AuthController {
 
     await this.tokenService.revokeSession(refreshToken);
 
+    //Update last login.
+    await this.userRepo.updateLastLogin(user.id);
+
     const tokens = await this.tokenService.createSession(
         //tuyệt đối không nên lấy userId từ req.body
         /*Nếu hacker có một Refresh Token hợp lệ của User A, 
         nhưng họ gửi kèm userId của User B trong body, và server của bạn tin vào cái body đó, 
         bạn sẽ vô tình cấp Access Token của User B cho hacker. 
         Đây là lỗ hổng IDOR (Insecure Direct Object Reference).*/
-        { id: decoded.id,userName: user.userName}, 
+        { id: decoded.id,userName: user.userName, role: user.role}, 
         deviceInfo
       );
 
-    res.json({status: true, ...tokens });
+    res.json({status: true, ...tokens, user: { id: user.id, email: user.email} },);
   }
 
-  loginWithGG =  async (req: any, res: any) => {
+  googleCallback = async (req: any, res: any) => {
     try {
-      const { idToken, salt, encryptedSecretKey_user, encryptedSecretKey_server } = req.body;
+      const profile = req.user; // từ passport
+      const deviceInfo = req.headers["user-agent"] || "Unknown";
 
-      if (!idToken) {
-        return res.status(400).json({ message: "idToken là bắt buộc" });
+      const email = profile.emails[0].value;
+      const name = profile.displayName;
+      const googleId = profile.id;
+
+      // Tìm hoặc tạo user (giữ nguyên logic cũ của bạn)
+      const result = await this.authService.loginWithGoogle({email, name, googleId,},deviceInfo);
+
+      if (!result.status) {
+      return res.redirect(
+          `aubud-app://auth/google/callback?error=${encodeURIComponent(result.message)}`
+        );
       }
 
-      // Lấy deviceInfo từ header User-Agent (giống login thường)
-      const deviceInfo = req.headers['user-agent'] || "Unknown Device";
+      // Redirect về app kèm token
+      const params = new URLSearchParams({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      userId: result.user.id,
+      email: result.user.email,
+      role: result.user.role,
+      salt: result.salt,
+      encryptedSecretKey_user: result.encryptedSecretKey_user,
+      isNewUser: result.isNewUser ? "1" : "0",
+    });
 
-      const result = await this.authService.loginWithGoogle(idToken, deviceInfo, salt, encryptedSecretKey_user, encryptedSecretKey_server);
-      return res.status(200).json(result);
+      // Deep link về app
+      res.redirect(`aubud-app://auth/google/callback?${params.toString()}`);
 
     } catch (error: any) {
-      console.error("[Google Auth Error]", error.message);
-      return res.status(401).json({ 
-        status: false, 
-        message: error.message || "Đăng nhập bằng GG thất bại",
-        user: { id: '', email: '', role: Role.NULL },
-        accessToken: '',
-        refreshToken: '',
-        salt: '',
-        encryptedSecretKey_user: '',
-      });
+      res.redirect(`aubud-app://auth/google/callback?error=${encodeURIComponent(error.message)}`);
     }
-  }
+  };
+
+  uploadKeyBundle = async (req: any, res: any) => {
+    try {
+      const { salt, encryptedSecretKey_user, encryptedSecretKey_server } = req.body;
+      const userId = req.user.id; // từ authMiddleware (JWT đã verify)
+
+      if (!salt || !encryptedSecretKey_user || !encryptedSecretKey_server) {
+        return res.status(400).json({ message: "Thiếu keyBundle" });
+      }
+
+      await this.authService.saveKeyBundle(userId, salt, encryptedSecretKey_user, encryptedSecretKey_server);
+
+      return res.status(200).json({ status: true, message: "Lưu keyBundle thành công" });
+
+    } catch (error: any) {
+      return res.status(500).json({ status: false, message: error.message });
+    }
+  };
 }

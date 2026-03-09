@@ -2,7 +2,7 @@ import { View, Text, Image } from "react-native";
 import styles from "../assets/styles/splashStyle";
 import { useProvider } from "../hooks/useProvider";
 import { useNavigation, StackActions } from "@react-navigation/native";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react"; 
 
 export default function CustomSplashScreen() {
   const { isAuthenticated, isLoading } = useProvider();

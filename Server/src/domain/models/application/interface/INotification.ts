@@ -6,7 +6,8 @@ export interface NotificationPayload {
   deviceToken?: string;      // dùng cho push
   title: string;
   body: string;
-  metadata?: Record<string, unknown>; // data tuỳ chỉnh thêm nếu cần
+  priority?: "low" | "normal" | "high";
+  metadata?: Record<string, unknown>; // // previousDevice, currentDevice, loginAt, ...
 }
 export interface NotificationResult {
   success: boolean;

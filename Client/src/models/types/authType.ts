@@ -24,7 +24,7 @@ export interface LoginPayload {
 export interface LoginResult{
   status: boolean;
   message: string;
-  email: string;
+  user:{id:string, email:string, role:string}
   accessToken: string;
   refreshToken: string;
   salt: string;

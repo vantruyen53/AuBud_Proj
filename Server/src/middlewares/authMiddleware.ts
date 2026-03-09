@@ -25,8 +25,32 @@ export function authenticateJWT(req: any, res: any, next: any) {
   try {
     const decoded = verifyToken(token);
     req.user = decoded;
+    console.log('✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅            TOKEN STILL VALID                ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅                                             ✅')
+    console.log('✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅')
     next();
   } catch (error:any) {
+    console.log('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌             TOKEN EXPIRED              ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌                                        ❌')
+    console.log('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌')
     return res
       .status(401)
       .json({ message: `Invalid or expired token: ${error}` });

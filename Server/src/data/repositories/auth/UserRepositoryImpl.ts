@@ -1,13 +1,20 @@
-import { User, Account } from "../../../domain/entities/authEntities.js";
+import { User, Account, UserRefresh } from "../../../domain/entities/authEntities.js";
 import type { IUserRepository } from "../../../domain/models/auth/IUserRepository.js";
-import type { Pool } from "mysql2/promise";
+import type { Pool, PoolConnection } from "mysql2/promise";
 import type { RowDataPacket } from "mysql2/promise";
 import {ServerResult} from '../../../domain/entities/appEntities.js';
+
+/**
+ * @param offset  - bắt đầu từ dòng thứ mấy
+ * @param limit   - lấy bao nhiêu dòng mỗi batch (mặc định 100)
+ */
 
 export default class UserRepositoris implements IUserRepository {
   constructor(private readonly pool: Pool) {}
 
   async create(user: User, account: Account): Promise<void> {
+    console.log("[Create] user:", JSON.stringify(user));      
+   console.log("[Create] account:", JSON.stringify(account));
     const connection = await this.pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -24,8 +31,8 @@ export default class UserRepositoris implements IUserRepository {
       const accSql = `
         INSERT INTO account 
           (id, email, password, role, user_id, status, last_login, verified,
-          salt, encrypted_secret_key_user, encrypted_secret_key_server)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+          salt, encrypted_secret_key_user, encrypted_secret_key_server, google_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       await connection.execute(accSql, [
         account.id,
@@ -39,11 +46,13 @@ export default class UserRepositoris implements IUserRepository {
         account.salt,
         account.encryptedSecretKey_user,
         account.encryptedSecretKey_server,
+        account.googleId ?? null,
       ]);
 
       await connection.commit();
     } catch (error) {
       await connection.rollback();
+      console.error("[Create] Error:", error); // ← thêm
       throw new Error("Could not create user account");
     } finally {
       connection.release();
@@ -75,22 +84,25 @@ export default class UserRepositoris implements IUserRepository {
             data.salt,
             data.encrypted_secret_key_user,  
             data.encrypted_secret_key_server,
+            data.google_id
         );
         (account as any).userName = data.user_name;
         return account;
     }
     return null;
-}
+  }
 
-  async findById(id: string): Promise<User | null> {
-    const sql = `SELECT * FROM user WHERE id = ? LIMIT 1`;
+  async findById(id: string): Promise<UserRefresh | null> {
+    const sql = `SELECT a.user_id as userId, u.user_name AS userName, a.role, a.email
+                  FROM account a INNER JOIN user u ON a.user_id = u.id
+                  WHERE a.user_id = ? LIMIT 1`;
     const [rows] = await this.pool.execute<RowDataPacket[]>(sql, [id]);
 
     if (rows.length === 0) return null;
 
     const data = rows[0];
     if (data)
-      return new User(data.id, data.user_name, data.create_at, data.last_input);
+      return new UserRefresh(data.userId, data.userName, data.email, data.role);
     else return null;
   }
 
@@ -176,5 +188,59 @@ export default class UserRepositoris implements IUserRepository {
     const sql = `SELECT role FROM account WHERE user_id = ? LIMIT 1`;
     const [rows]: any = await this.pool.execute(sql, [userId]);
     return rows.length > 0 ? rows[0].role : null;
+  }
+
+  async updateLastLogin(userId:string){
+    const dateTime = new Date();
+    try{
+      const updateSql = `UPDATE account SET last_login = ?  WHERE user_id = ?`
+      await this.pool.execute(updateSql, [dateTime, userId])
+      return true
+    } catch (err){
+      console.error(err)
+      return false
+    }
+  }
+  
+  async updateLastInput(userId:string, conn?: PoolConnection){
+    const dateTime = new Date();
+    try{
+      const updateSql = `UPDATE user SET last_input = ?  WHERE id = ?`
+      const executor = conn ?? this.pool;
+      await executor.execute(updateSql, [dateTime, userId])
+    } catch (err: any){
+      console.error(err)
+      throw new Error(err)
+    }
+  }
+
+  async getUsersWithNoInputToday(offset: number,limit: number = 100 ): 
+    Promise<{ userId: string; email: string; userName: string }[]>{
+
+      const querySql = `SELECT a.user_id AS userId, a.email, u.user_name AS userName
+          FROM account a 
+          INNER JOIN user u ON
+          a.user_id = u.id
+          WHERE a.status != 'ban' AND verified = 1 AND (u.last_input IS NULL OR u.last_input < CURDATE() )
+          LIMIT ? OFFSET ?
+        `
+      const [rows] = await this.pool.execute<RowDataPacket[]>(querySql, [limit, offset]);
+
+      return rows as { userId: string; email: string; userName: string }[];
+  }
+
+  // repo — thêm method mới
+  async updateKeyBundle(
+    userId: string,
+    salt: string,
+    encryptedSecretKey_user: string,
+    encryptedSecretKey_server: string,
+  ): Promise<void> {
+    const sql = `
+      UPDATE account 
+      SET salt = ?, encrypted_secret_key_user = ?, encrypted_secret_key_server = ?
+      WHERE user_id = ?
+    `;
+    await this.pool.execute(sql, [salt, encryptedSecretKey_user, encryptedSecretKey_server, userId]);
   }
 }

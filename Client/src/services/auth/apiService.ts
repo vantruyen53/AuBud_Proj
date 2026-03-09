@@ -8,9 +8,17 @@ const SECRET_KEY    = "secretKey";
 // Callback để notify useProvider khi session hết hạn
 // Được set từ bên ngoài một lần duy nhất khi app khởi động
 let onSessionExpired: (() => void) | null = null;
+let onTokenRefreshed: ((newToken: string) => void) | null = null;
+let onSocketReconnect: ((newToken: string) => void) | null = null;
 
 export function setSessionExpiredCallback(cb: () => void) {
   onSessionExpired = cb;
+}
+export function setTokenRefreshedCallback(cb: (newToken: string) => void) {
+  onTokenRefreshed = cb;
+}
+export function setSocketReconnectCallback(cb: (newToken: string) => void) {
+  onSocketReconnect = cb;
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -18,7 +26,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
     if (!refreshToken) return null;
 
-    const res = await fetch(`${API_URL}/aubud/api/v1/auth/refresh-token`, {
+    const res = await fetch(`${API_URL}/auth/refresh-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -29,8 +37,12 @@ async function refreshAccessToken(): Promise<string | null> {
     const data = await res.json();
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
     await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
-    return data.accessToken;
 
+    // ← THÊM: notify AppProvider cập nhật state
+    onTokenRefreshed?.(data.accessToken);
+    onSocketReconnect?.(data.accessToken);
+
+    return data.accessToken;
   } catch {
     return null;
   }
@@ -49,13 +61,14 @@ export async function apiFetch(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         ...options.headers,
+        "ngrok-skip-browser-warning": "true"
       },
     });
 
   let response = await makeRequest(accessToken ?? "");
 
   // Token hết hạn → thử refresh
-  if (response.status === 403) {
+  if (response.status === 401) {
     const newToken = await refreshAccessToken();
 
     if (!newToken) {

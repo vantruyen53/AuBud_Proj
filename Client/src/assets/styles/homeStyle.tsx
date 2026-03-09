@@ -96,7 +96,13 @@ const styles = StyleSheet.create({
       fontWeight:'700',
       color:Colors.light.primary,
       padding:3,
-      backgroundColor:'#FF0000'
+      backgroundColor:'#FF3B30'
+    },
+    badgeText:{
+      color:'#fff',
+      fontSize:12,
+      fontWeight: "700",
+      lineHeight: 12,
     },
     userName: {
       color: mainColor,

@@ -3,7 +3,7 @@ import type {
   NotificationChannel,
   NotificationPayload,
   NotificationResult,
-} from "../../domain/models/auth/INotification.js";
+} from "../../domain/models/application/interface/INotification.js";
 export class NotificationStrategy {
   constructor(private readonly factory: typeof NotificationChannelFactory) {}
   //Gửi qua một channel cụ thể
@@ -19,7 +19,7 @@ export class NotificationStrategy {
         channel,
         message: `Channel ${channel} is not available for this payload`,
         sentAt: new Date(),
-      };
+      }; 
     }
     return instance.send(payload);
   }

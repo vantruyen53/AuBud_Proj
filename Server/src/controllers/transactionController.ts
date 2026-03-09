@@ -40,6 +40,10 @@ export class TransactionController {
 
   create=async(req: any, res: any)=>{
     const {userId, newEncryptedBalance} = req.body
+    console.log('=data to server:')
+    console.log(userId)
+    console.log(req.body)
+    console.log(newEncryptedBalance)
 
     const result = await this.transactionService.addTransaction(userId, req.body,newEncryptedBalance);
     return res.status(201).json({

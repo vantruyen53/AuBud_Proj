@@ -1,7 +1,7 @@
 import type {
   NotificationChannel,
   INotificationChannel,
-} from "../../domain/models/auth/INotification.js";
+} from "../../domain/models/application/interface/INotification.js";
 import {
   EmailNotificationChannel,
   PushNotificationChannel,
@@ -15,7 +15,7 @@ export class NotificationChannelFactory {
     ["email", new EmailNotificationChannel()],
     ["push", new PushNotificationChannel()],
     ["in-app", new InAppNotificationChannel()],
-  ]);
+  ]); 
 
   static create(channel: NotificationChannel): INotificationChannel {
     const instance = this.registry.get(channel);

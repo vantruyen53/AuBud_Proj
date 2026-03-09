@@ -26,15 +26,22 @@ export const dateTimeStr = () => {
 }
 
 const formatCurrency = (amount: number, config: { showSign?: boolean, showCurrency?: boolean, absolute?: boolean } = {}) => {
+
   const { showSign = true, showCurrency = true, absolute = false } = config;
+  
   const val = absolute ? Math.abs(amount) : amount;
   const absVal = Math.abs(val);
   const formatted = absVal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
   let result = formatted;
   if (showCurrency) result = `${result} ₫`;
+  
   if (showSign && !absolute) {
+    // Hiện dấu + hoặc - theo type giao dịch
     result = `${val >= 0 ? '+' : '-'}${result}`;
+  } else if (!absolute && val < 0) {
+    // Không showSign nhưng số âm → vẫn hiện dấu trừ
+    result = `-${result}`;
   }
   
   return result;

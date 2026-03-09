@@ -33,6 +33,12 @@ import {
   newEncryptSecretKeyWithKEK,
 } from "../utils/helpers/RSA.js";
 
+export interface GoogleProfile {
+  email: string;
+  name: string;
+  googleId: string;
+}
+
 export class AuthServiceImpl implements IAuthService {
   private notificationStrategy: NotificationStrategy;
 
@@ -53,21 +59,24 @@ export class AuthServiceImpl implements IAuthService {
     if (!account || !account.verified)
       return new Login(
         false,"Email hoặc mật khẩu không đúng khi tìm kiếm email",
-        "","","","","",
+        {id:'', email:'',role:''},"","","","",
       );
     // Kiểm tra trạng thái tài khoản
     if (account.status === AccountStatus.BAN)
       return new Login(
         false,"Tài khoản của bạn đã bị khóa",
-        "","","","","",
+        {id:'', email:'',role:''},"","","","",
       );
     // Kiểm tra mật khẩu
     const isMatch = await comparePassword(data.password, account.passwordHash);
     if (!isMatch)
       return new Login(
         false,"Email hoặc mật khẩu không đúng khi so sánh mật khẩu",
-        "","","","","",
+        {id:'', email:'',role:''},"","","","",
       );
+
+    //update last login
+    await this.userRepo.updateLastLogin(account.userId);
 
     // Tạo Session (Access Token & Refresh Token)
     const tokens = await this.tokenService.createSession(
@@ -75,15 +84,17 @@ export class AuthServiceImpl implements IAuthService {
       deviceInfo,
     );
 
-    const lastDevice = await this.tokenService.findLastDeviceByUserId(
-      account.userId,
-    );
+    const lastDevice = await this.tokenService.findLastDeviceByUserId(account.userId,);
+    console.log("[Login] lastDevice:", lastDevice);
+    console.log("[Login] currentDevice:", deviceInfo);
+
     if (lastDevice && lastDevice !== deviceInfo) {
-      // Thiết bị khác nhau → gửi in-app notification
+      // Thiết bị khác nhau → gửi in-app notification lẫn email song song
       // Không await để không block response về client
       this.notificationStrategy
-        .sendTo("in-app", {
+        .sendToMany(["in-app", "email"], {
           recipientId: account.userId,
+          recipientEmail: account.email,   // ← thêm email
           title: "Đăng nhập từ thiết bị mới",
           body: `Tài khoản của bạn vừa đăng nhập từ thiết bị: ${deviceInfo}. Nếu không phải bạn, hãy đổi mật khẩu ngay.`,
           metadata: {
@@ -100,7 +111,7 @@ export class AuthServiceImpl implements IAuthService {
     return new Login(
       true,
       "Đăng nhập thành công",
-      account.email,
+      {id: account.userId, email: account.email, role: account.role},
       tokens.accessToken,
       tokens.refreshToken,
       account.salt,
@@ -226,62 +237,99 @@ export class AuthServiceImpl implements IAuthService {
     else return new ServerResult(false, `verifiy account - ${email} failed`);
   }
 
-  // Thêm method loginWithGoogle vào AuthServiceImpl
-  async loginWithGoogle(
-    idToken: string,
-    deviceInfo: string,
-    salt: string,
-    encryptedSecretKey_user: string,
-    encryptedSecretKey_server: string,
-  ) {
-    const googleStrategy = new GoogleAuthStrategy();
-    const payload = await googleStrategy.authenticate(idToken);
+  // Type mới cho Google profil
 
-    // Tìm hoặc tạo account
-    let account = await this.userRepo.findByEmail(payload.email);
+  async loginWithGoogle(profile: GoogleProfile, deviceInfo: string) {
+    // Tìm account theo email
+    let account = await this.userRepo.findByEmail(profile.email);
+    let isNewUser = false;
 
     if (!account) {
-      // Tạo mới user + account cho tài khoản Google
+      // Tạo mới — nhưng chưa có salt/encryptedSecretKey vì client chưa gửi
+      // → trả về flag "newUser" để client gửi keyBundle lên
+      isNewUser = true;
       const userId = crypto.randomUUID();
       const accountId = crypto.randomUUID();
       const now = datetime();
 
-      const newUser = new User(userId, payload.name, now, now);
+      const newUser = new User(userId, profile.name, now, now);
       const newAccount = new Account(
         accountId,
-        payload.email,
-        "", // password null — tài khoản Google
+        profile.email,
+        "",
         Role.USER,
         userId,
         AccountStatus.ACTIVE,
-        true, // verified mặc định true vì Google đã xác minh email
+        true,
         now,
-        salt,
-        encryptedSecretKey_user,
-        encryptedSecretKey_server,
+        "", // salt — sẽ update sau
+        "", // encryptedSecretKey_user — sẽ update sau
+        "", // encryptedSecretKey_server — sẽ update sau
+        profile.googleId,
       );
 
       await this.userRepo.create(newUser, newAccount);
-      account = await this.userRepo.findByEmail(payload.email);
-    } else if (!account.googleId && payload.googleId) {
-      // Email đã tồn tại nhưng chưa liên kết Google → tự động liên kết
-      await this.userRepo.linkGoogleId(account.id, payload.googleId);
+      account = await this.userRepo.findByEmail(profile.email);
+
+    } else {
+      console.log('=============GG ID: ', account.googleId)
+      if (!account.googleId) {
+        // ❌ Email này đã đăng ký bằng email/password → chặn lại
+        throw new Error(
+          "Email này đã được đăng ký bằng phương thức email và mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu đã được đăng ký để tiếp tục sử dụng."
+        );
+      }
     }
 
     if (!account) throw new Error("Không thể tạo tài khoản");
-    if (account.status === AccountStatus.BAN)
-      throw new Error("Tài khoản đã bị khóa");
+    if (account.status === AccountStatus.BAN) throw new Error("Tài khoản đã bị khóa");
 
+    // Update last login (giống login thường)
+    await this.userRepo.updateLastLogin(account.userId);
+
+    // Tạo session
     const tokens = await this.tokenService.createSession(
-      { id: account.userId, role: account.role },
+      { id: account.userId,userName: account.userName, role: account.role },
       deviceInfo,
     );
+
+    // Kiểm tra thiết bị mới (giống login thường)
+    const lastDevice = await this.tokenService.findLastDeviceByUserId(account.userId);
+    if (lastDevice && lastDevice !== deviceInfo) {
+      this.notificationStrategy
+        .sendToMany(["in-app", "email"], {
+          recipientId: account.userId,
+          recipientEmail: account.email,
+          title: "Đăng nhập từ thiết bị mới",
+          body: `Tài khoản của bạn vừa đăng nhập từ thiết bị: ${deviceInfo}. Nếu không phải bạn, hãy đổi mật khẩu ngay.`,
+          metadata: {
+            previousDevice: lastDevice,
+            currentDevice: deviceInfo,
+            loginAt: new Date().toISOString(),
+          },
+        })
+        .catch((err) =>
+          console.error("[Notification Error] Device change alert:", err)
+        );
+    }
 
     return {
       status: true,
       message: "Đăng nhập bằng Google thành công",
       user: { id: account.userId, email: account.email, role: account.role },
-      ...tokens,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      salt: account.salt ?? "",
+      encryptedSecretKey_user: account.encryptedSecretKey_user ?? "",
+      isNewUser,
     };
+  }
+  async saveKeyBundle(
+    userId: string,
+    salt: string,
+    encryptedSecretKey_user: string,
+    encryptedSecretKey_server: string,
+  ) {
+    await this.userRepo.updateKeyBundle(userId, salt, encryptedSecretKey_user, encryptedSecretKey_server);
   }
 }
