@@ -231,7 +231,7 @@ export default function WalletScreen() {
                 <Text style={styles.sectionTitle}>Wallets</Text>
                 <View style={styles.sectionTotal}>
                   <Text style={styles.headerLabel}>Total:</Text>
-                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.w) : '******'}</Text>
+                  <Text style={styles.headerValue}>{isShowData ? formatCurrency(totalData.w, { showPositiveSign: false }) : '******'}</Text>
                 </View>
               </View>
             }
@@ -250,7 +250,7 @@ export default function WalletScreen() {
                     </View>
                     <View>
                         <Text style={styles.walletName}>{item.name}</Text>
-                        <Text style={styles.balance}>{isShowData ? formatCurrency(item.balance) : '******'}</Text>
+                        <Text style={styles.balance}>{isShowData ? formatCurrency(item.balance,  { showPositiveSign: false }) : '******'}</Text>
                     </View>
                 </TouchableOpacity>
             ))}

@@ -75,13 +75,14 @@ export default function HomeScreen() {
     setSocketReconnectCallback((newToken: string) => {
       socketService.disconnect();
       socketService.connect(newToken);
-      usePushNotification(accessToken);
     });
 
-    return () => socketService.disconnect(); // chỉ disconnect khi unmount HomeScreen
+    return () => socketService.disconnect();
   }, [accessToken]);
 
-   useNotification(accessToken);
+  
+  usePushNotification(accessToken);
+  useNotification(accessToken);
 
   // 1. Lấy dữ liệu tổng quan cho summary card và mảng gốc để filter "transaction today"
   useFocusEffect(

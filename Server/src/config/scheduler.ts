@@ -33,12 +33,12 @@ export async function initMarketScheduler(marketService: IMarketService) {
   const reminderService = new ReminderService();
   scheduler.addCronJob(
     new CronJob(
-      { cronExpression: '0 21 * * *' },    // 21:00 hàng ngày
+      { cronExpression: '59 16 * * *' },    // 21:00 hàng ngày
       new AsyncTask('daily-reminder', async () => {
         await reminderService.sendDailyReminder();
       })
     )
   );
 
-  console.log('[Reminder] Scheduler started — runs at 21:00 daily');
+  console.log('[Reminder] Scheduler started — runs at 16:59 daily');
 }

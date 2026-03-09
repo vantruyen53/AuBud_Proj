@@ -47,6 +47,6 @@ SocketService.init(httpServer);
 
 // ── Start server ─────────────────────────────────────────────────────────────
 httpServer.listen(PORT, async () => {
-  // await initMarketScheduler(marketService);
+  await initMarketScheduler(marketService);
   console.log(`Server AuBud running on port ${PORT}`);
 });

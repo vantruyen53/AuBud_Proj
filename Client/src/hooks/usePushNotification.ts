@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { API_URL } from "../constants/securityContants";
+import Constants from 'expo-constants';
 
 // Cấu hình cách hiển thị notification khi app đang mở
 Notifications.setNotificationHandler({
@@ -37,7 +38,10 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
 
   // Lấy Expo Push Token
-  const tokenData = await Notifications.getExpoPushTokenAsync();
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId: Constants.expoConfig?.extra?.eas?.projectId 
+      ?? Constants.easConfig?.projectId,
+  });
   console.log("[Push] Expo Push Token:", tokenData.data);
   return tokenData.data;
 }

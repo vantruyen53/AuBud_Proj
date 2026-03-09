@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Client",
-    "slug": "Client",
+    "slug": "aubudproj",
     "owner": "truyenjjjjjjjj",
     "scheme": "aubud-app",
     "version": "1.0.0",
@@ -26,7 +26,13 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d7361e8c-f94e-4693-9112-9b343e553b89"
+      }
+    }
   }
 }

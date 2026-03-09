@@ -217,15 +217,20 @@ export default class UserRepositoris implements IUserRepository {
   async getUsersWithNoInputToday(offset: number,limit: number = 100 ): 
     Promise<{ userId: string; email: string; userName: string }[]>{
 
-      const querySql = `SELECT a.user_id AS userId, a.email, u.user_name AS userName
-          FROM account a 
-          INNER JOIN user u ON
-          a.user_id = u.id
-          WHERE a.status != 'ban' AND verified = 1 AND (u.last_input IS NULL OR u.last_input < CURDATE() )
-          LIMIT ? OFFSET ?
-        `
-      const [rows] = await this.pool.execute<RowDataPacket[]>(querySql, [limit, offset]);
-
+      const sql = `
+        SELECT u.id AS userId, a.email, u.user_name AS userName
+        FROM user u
+        INNER JOIN account a ON a.user_id = u.id
+        WHERE 
+          a.status != 'ban'
+          AND a.verified = 1
+          AND (
+            u.last_input IS NULL
+            OR DATE(u.last_input) < CURDATE()
+          )
+        LIMIT ${Number(limit)} OFFSET ${Number(offset)}
+      `;
+      const [rows] = await this.pool.execute<RowDataPacket[]>(sql);
       return rows as { userId: string; email: string; userName: string }[];
   }
 

@@ -25,18 +25,7 @@ export function authenticateJWT(req: any, res: any, next: any) {
   try {
     const decoded = verifyToken(token);
     req.user = decoded;
-    console.log('✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅            TOKEN STILL VALID                ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅                                             ✅')
-    console.log('✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅')
+    console.log('✅ TOKEN STILL VALID ')
     next();
   } catch (error:any) {
     console.log('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌')
