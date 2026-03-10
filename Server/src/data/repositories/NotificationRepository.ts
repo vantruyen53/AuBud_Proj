@@ -13,12 +13,12 @@ function mapRow(row: RowDataPacket): INotification {
     type: row.type,
     title: row.title,
     description: row.contents,
-    time: row.created_at
-      ? row.created_at.toISOString()
-      : String(row.created_at),
+    time: row.time instanceof Date 
+      ? row.time.toISOString()
+      : String(row.time),
     isRead: row.is_read === 1 || row.is_read === true,
     metadata: row.metadata
-      ? (typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata)
+      ? (typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata) 
       : null,
   };
 }
@@ -72,12 +72,14 @@ export class NotificationRepository {
    */
   async findByUserId(userId: string): Promise<INotification[]> {
     const sql = `
-      SELECT id, for_user_id, type, title, contents, is_read, create_at, metadata
+      SELECT id, for_user_id, type, title, contents, is_read, create_at as time, metadata
       FROM notification
       WHERE for_user_id = ?
       ORDER BY create_at DESC
     `;
     const [rows] = await pool.execute<RowDataPacket[]>(sql, [userId]);
+
+
     return rows.map(mapRow);
   }
 

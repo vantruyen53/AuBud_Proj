@@ -137,9 +137,25 @@ router.get("/aubud/api/v1/notifications", authenticateJWT, notificationControlle
 router.patch("/aubud/api/v1/notifications/read-all", authenticateJWT, notificationController.markAllAsRead.bind(notificationController))
 
 
-//=====================CATEGORY API=====================
+//=====================PUSH NOTIFICATION API=====================
 import { DeviceController } from "../controllers/DeviceController.js";
 const deviceController = new DeviceController();
 router.post("/aubud/api/v1/device/push-token",authenticateJWT,deviceController.savePushToken.bind(deviceController));
+
+
+//=====================FEEDBACK API=====================
+import { FeedbackController } from "../controllers/feedbackController.js";
+import { FeedbackService } from "../services/applicationService/FeebackService.js";
+
+const feedbackService = new FeedbackService(pool)
+const feedbackController = new FeedbackController(feedbackService)
+
+router.post("/aubud/api/v1/feedback", authenticateJWT, feedbackController.send)
+
+
+//=================================API TEST RATE LIMIT========================
+router.get('/', (req,res)=>{
+  res.send('Welcome to Aubud')
+})
 
 export default router;

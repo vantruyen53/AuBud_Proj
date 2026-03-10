@@ -11,10 +11,14 @@ import router from "./src/routes/routesApp.js";
 import { initMarketScheduler } from "./src/config/scheduler.js";
 import { MarketService } from "./src/services/applicationService/WebDataScrapService.js";
 import { SocketService } from "./src/config/socket.js"; //
-
+import { apiLimiter } from "./src/utils/helpers/rateLimit.js";
 
 dotenv.config();
+
 const app = express();
+// 'trust proxy' cho phép Express tin tưởng các header mà ngrok gửi tới (như X-Forwarded-For)
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 
 await connectRedis();
@@ -34,6 +38,7 @@ if (!process.env.RSA_PRIVATE_KEY || !process.env.RSA_PUBLIC_KEY){
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cors());
+app.use(apiLimiter)
 app.use(router);
 app.use(passport.initialize());
 

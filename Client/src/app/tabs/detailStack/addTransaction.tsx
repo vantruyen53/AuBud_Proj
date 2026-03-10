@@ -224,7 +224,7 @@ export default function AddTransactionScreen({route}:any) {
   };
 
   //LOAD DATA FOR EDITTING
-  payLoad&&useEffect(()=>{
+  payLoad && useEffect(()=>{
     const wallet = wallets.find(w => w.id===payLoad?.walletId)
     const backupBalance = wallet?.balance+payLoad?.amount;
 
@@ -305,8 +305,11 @@ export default function AddTransactionScreen({route}:any) {
             typePar: actionType,
             setIsOpenCatNameInput: (status: boolean) =>
               setIsOpenCatNameInput(status),
-            setSelectedCategory: (categorie: CategoryDTO) =>
-              setSelectedCategory(categorie),
+            setSelectedCategory: (categorie: CategoryDTO) =>{
+              setSelectedCategory(categorie);
+              console.log('=============setSelectedCategory: ', categorie)
+              setFormData({...formData, categoryId:categorie.id})
+            }
           })
         }
       >

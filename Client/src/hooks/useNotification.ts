@@ -26,7 +26,7 @@ export function useNotification(accessToken: string | null) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const json = await res.json();
-
+      
       if (json.success) {
         setNotifications(json.data.notifications as INotification[]);
       }

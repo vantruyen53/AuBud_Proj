@@ -149,7 +149,7 @@ export default function AnalysisScreen() {
 
   console.log('Data pie chart',dataPieChart)
 
-  const monthLat = monthLatinh(parseInt(specificTime.m))
+  const monthLat = monthLatinh(month)
 
   return (
     <View style={styles.container}>

@@ -28,18 +28,7 @@ export function authenticateJWT(req: any, res: any, next: any) {
     console.log('✅ TOKEN STILL VALID ')
     next();
   } catch (error:any) {
-    console.log('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌             TOKEN EXPIRED              ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌                                        ❌')
-    console.log('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌')
+    console.log('❌ TOKEN EXPIRED ❌')
     return res
       .status(401)
       .json({ message: `Invalid or expired token: ${error}` });
@@ -52,6 +41,8 @@ export function loginValidation(req: any, res: any, next: any) {
       return res.status(400).json({ message: "All fields are required controller" });
     }
 
+    console.log('IP: ', req.ip)
+    console.log('Password: ', password)
 
     const isSHA256Hex = /^[a-f0-9]{64}$/.test(password);
     if (!isSHA256Hex) {

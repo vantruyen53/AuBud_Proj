@@ -24,16 +24,23 @@ import { COUNTRY_FLAG_MAP } from "@/src/constants/COUNTRY_FLAG_MAP";
 import { MarketService } from "@/src/services/ServiceImplement/marketService";
  import { useNotificationStore } from "../../store/application/NotificationStore";
  import { socketService } from "../../services/Socketservice";
+import { FeedbakcService } from "@/src/services/ServiceImplement/feedbackService";
 
 interface IUser{
   name:string,
   email:string,
+}
+interface FeedbackUIProps {
+  text: string;
+  setText: (value: string) => void;
+  onSend: () => void;
 }
 
 export default function MoreScreen() {
   const navigation = useNavigation<HomeStackNavProp>();
   const {signOut, userName, email, id, accessToken} = useProvider();
   const walletApp = useMemo(()=>new WalletApp({ id, accessToken }),[id, accessToken])
+  const feedbackService = useMemo(()=>new FeedbakcService({id, accessToken}), [id, accessToken])
 
   const [user, setUser]=useState<IUser>({name:userName, email:email})
   const [modalVisibe, setModalVisibe] = useState(false);
@@ -44,6 +51,7 @@ export default function MoreScreen() {
 
   const [vndAmount, setVndAmount] = useState('');
   const [marketData, setMarketData] = useState<IMarketDataResponse | null>(null);
+  const [feedback, setFeedback]=useState<string>('');
 
   
   const iconAcc = createIconAcc(user.name);
@@ -289,7 +297,58 @@ export default function MoreScreen() {
       </View>
     );
   };
+  const renderFeedbackUI = ({ text, setText, onSend }: FeedbackUIProps) =>{
+    const MAX_CHARS = 200;
+    const isOverLimit = text.length >= MAX_CHARS;
+    const isDisabled = text.trim().length === 0 || isOverLimit;
 
+    return (
+      <View style={fbStyles.container}>
+        <View style={[
+          fbStyles.inputWrapper, 
+          isOverLimit && fbStyles.inputWarning
+        ]}>
+          <TextInput
+            style={fbStyles.input}
+            placeholder="What are you thinking?"
+            placeholderTextColor="#999"
+            multiline={true}           // Cho phép xuống dòng
+            textAlignVertical="top"    // Bắt đầu chữ từ đỉnh ô input
+            maxLength={MAX_CHARS}      // Chặn không cho nhập quá 200
+            value={text}
+            onChangeText={setText}
+          />
+          
+          <Text style={[
+            fbStyles.charCount,
+            isOverLimit && fbStyles.charCountWarning
+          ]}>
+            {text.length}/{MAX_CHARS}
+          </Text>
+        </View>
+
+        <TouchableOpacity 
+          style={[fbStyles.sendButton, isDisabled && fbStyles.sendButtonDisabled]}
+          onPress={onSend}
+          disabled={isDisabled}
+          activeOpacity={0.7}
+        >
+          <Text style={fbStyles.sendButtonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const handleSendFeedback= async()=>{
+    const result = await feedbackService.send(feedback);
+    if(result){
+      setModalVisibe(false)
+    } else{
+      Alert.alert("Error", "Some thing went wrong! Please try later");
+      setModalVisibe(false)
+      setFeedback('');
+    }
+  }
 
   const handleSignOut = ()=>{
     Alert.alert("Sign out", "Are you sure to sign ut?", [
@@ -410,6 +469,7 @@ export default function MoreScreen() {
                 {modalContent==='de' && renderDebtList()}
                 {modalContent === 'foc' && renderForeignCurrency()}
                 {modalContent === 'gol' && renderGoldPrice()}
+                {modalContent ==='fe' && renderFeedbackUI({text: feedback, setText: setFeedback, onSend: handleSendFeedback})}
               </ScrollView>
             </View>
           </KeyboardAvoidingView>
@@ -854,5 +914,65 @@ const gStyles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'right',
     fontStyle: 'italic',
+  },
+});
+const fbStyles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  inputWrapper: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    minHeight: 150, // Chiều cao tối thiểu cho khung nhập liệu
+  },
+  inputWarning: {
+    borderColor: '#FFD700', // Border vàng khi đạt giới hạn
+    borderWidth: 1.5,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    minHeight: 100,
+    lineHeight: 22,
+  },
+  charCount: {
+    textAlign: 'right',
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+  },
+  charCountWarning: {
+    color: '#D4AF37', // Màu vàng đậm/nổi bật hơn cho label đếm
+    fontWeight: 'bold',
+  },
+  sendButton: {
+    marginTop: 20,
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Shadow cho iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    // Elevation cho Android
+    elevation: 3,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#B0D4FF', // Màu nhạt khi không thể gửi
+    elevation: 0,
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
