@@ -105,11 +105,4 @@ export interface IUser{
   accessToken:string,
 }
 
-export interface IMessage{
-  _id: string, 
-  text: string,
-  createdAt: string,
-  from: string
-}
-
 export {ITransaction, IDateState, ITransactionSection, IDayData, ICategory};

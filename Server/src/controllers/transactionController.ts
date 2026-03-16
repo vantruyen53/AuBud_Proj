@@ -4,7 +4,7 @@ export class TransactionController {
 
   getTransactions=async(req: any, res: any) =>{
     try {
-      const {userId} = req.query; 
+      const userId = req.user.id; 
       const query = req.query; 
       const result = await this.transactionService.getTransactions(userId, query);
       return res.status(200).json({
@@ -23,7 +23,8 @@ export class TransactionController {
 
   getMonthlySpendingSummary=async(req: any, res: any) =>{
     try{
-      const {userId, day, month, year} = req.query;
+      const userId = req.user.id;
+      const { day, month, year} = req.query;
       const result = await this.transactionService.getMonthlySpendingSummary(userId, 
         parseInt(day as string),parseInt(month as string),parseInt(year as string));
       if(result)
@@ -39,13 +40,14 @@ export class TransactionController {
   }
 
   create=async(req: any, res: any)=>{
-    const {userId, newEncryptedBalance} = req.body
+    const userId = req.user.id;
+    const {newEncryptedBalance,...data} = req.body
     console.log('=data to server:')
     console.log(userId)
     console.log(req.body)
     console.log(newEncryptedBalance)
 
-    const result = await this.transactionService.addTransaction(userId, req.body,newEncryptedBalance);
+    const result = await this.transactionService.addTransaction(userId, data,newEncryptedBalance);
     return res.status(201).json({
       status:result.status,
       data: null,
@@ -54,7 +56,8 @@ export class TransactionController {
   }
 
   update=async (req:any, res:any)=>{
-    const { userId, ...data } = req.body;
+    const userId = req.user.id;
+    const {  ...data } = req.body;
     const result = await this.transactionService.updateTransaction(userId, data)
     return res.status(200).json({
       status:result.status,
@@ -64,10 +67,11 @@ export class TransactionController {
   }
   
   delete=async (req: any, res: any)=>{
+    const userId = req.user.id;
     const { id } = req.query; 
     const {newBackupBalance} = req.body;
-    console.log(`${id} ============= ${newBackupBalance} ======== ${req.user.id}`)
-    const result = await this.transactionService.removeTransaction(req.user.id, id as string, newBackupBalance);
+    console.log(`${id} ============= ${newBackupBalance} ======== ${userId}`)
+    const result = await this.transactionService.removeTransaction(userId, id as string, newBackupBalance);
     return res.status(200).json({
       status: result.status,
       message: result.message

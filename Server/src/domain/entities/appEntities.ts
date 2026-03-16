@@ -37,8 +37,8 @@ export interface IMonthlySummary{
 //==========================WALLET=================
 export interface WalletEntity {
     id: string;
-    name: string;      // encrypted
-    balance: string;   // encrypted
+    name: string;    
+    balance: string; 
 }
 export interface SavingEntity {
     id: string;

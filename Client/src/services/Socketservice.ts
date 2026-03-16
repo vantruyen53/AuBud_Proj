@@ -19,7 +19,7 @@ class SocketService {
    */
   connect(accessToken: string): void {
     if (this.socket?.connected) return;
-    const SERVER_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? "http://localhost:3000";
+    const SERVER_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? "http://localhost:8080";
 
     this.socket = io(SERVER_URL, {
       auth: { token: accessToken }, // Server middleware sẽ verify token này
@@ -27,6 +27,7 @@ class SocketService {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
+      upgrade: false,
     });
 
     this.socket.on("connect", () => {

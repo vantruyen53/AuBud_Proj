@@ -243,7 +243,7 @@ export default function SignUpScreen() {
               onPress={handleRegister}
             >
               <Text style={styles.authButtonText}>Sign up</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> 
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />

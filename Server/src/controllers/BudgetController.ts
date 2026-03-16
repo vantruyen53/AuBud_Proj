@@ -5,7 +5,8 @@ export class BudgetController {
 
   getBudgets = async (req: any, res: any) => {
     try {
-      const { userId, month, year } = req.query;
+      const userId = req.user.id;
+      const {  month, year } = req.query;
 
       if (!userId || !month || !year) { 
         return res.status(400).json({ message: 'userId, month, year là bắt buộc' });
@@ -22,7 +23,8 @@ export class BudgetController {
 
   createBudget = async (req: any, res: any) => {
     try {
-      const { userId, categoryId, target, date, status } = req.body;
+      const userId = req.user.id;
+      const {  categoryId, target, date, status } = req.body;
 
       console.log( userId, categoryId, target, date, status )
 
@@ -51,8 +53,9 @@ export class BudgetController {
 
   updateBudget = async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const { id: budgetId } = req.params;
-      const { userId, target } = req.body;
+      const {  target } = req.body;
 
       if (!budgetId || !userId || !target) {
         return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
@@ -76,7 +79,7 @@ export class BudgetController {
   deleteBudget = async (req: any, res: any) => {
     try {
       const { id: budgetId } = req.params;
-      const { userId } = req.body;
+      const userId = req.user.id;
 
       if (!budgetId || !userId) {
         return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });

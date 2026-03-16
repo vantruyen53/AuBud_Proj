@@ -1,4 +1,4 @@
-import {Text,View,TouchableOpacity,TextInput,Alert,Animated,SectionListData,} from "react-native";
+import {Text,View,TouchableOpacity,TextInput,Alert,Animated,RefreshControl,} from "react-native";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
@@ -24,6 +24,7 @@ import { IDateState, ITransactionItem } from "../../../models/interface/Entities
 import { getTransactionSections } from "../../../utils/generateSectionList ";
 import { TransactionApp } from "@/src/store/application/TransactionApp";
 import FilterMenu from "@/src/components/FilterMenuSearch";
+import LoadingLogo from "@/src/components/loadingOverlay";
 
 export default function HistoryScreen() {
   const date = new Date();
@@ -56,6 +57,8 @@ export default function HistoryScreen() {
   const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
   const [summary, setSummary] = useState({totalSending: 0,totalIncome: 0,balance: 0,});
 
+  const [isLoading, setIsLoading] = useState(false)
+
   // Effect 1: set specificTime khi timeLine thay đổi
   useFocusEffect(
     useCallback(() => {
@@ -76,10 +79,8 @@ export default function HistoryScreen() {
     }, [timeLine])
   );
 
-  // Effect 2: fetch data khi specificTime thay đổi
-  useEffect(() => {
-    const fetchData = async () => {
-      const since = timeLine === "Date" ? 'day' : timeLine === "Month" ? 'month' : 'year';
+  const loadData = async()=>{
+    const since = timeLine === "Date" ? 'day' : timeLine === "Month" ? 'month' : 'year';
       const result = await tractionApp.getTransactionHistory(
         parseInt(specificTime.d) || 0,
         parseInt(specificTime.m) || 0,
@@ -94,9 +95,25 @@ export default function HistoryScreen() {
           balance: result.balance,
         });
       }
-    };
-    fetchData();
-  }, [specificTime, timeLine, searchContent, isSearch, trigger]);
+  }
+
+  // Effect 2: fetch data khi specificTime thay đổi
+  useEffect(() => {
+    const fetchData =async()=>{
+       setIsLoading(true)
+        await loadData();
+       setIsLoading(false)
+     }
+     fetchData()
+  }, [specificTime, timeLine, trigger]);
+
+  const onRefresh = useCallback(async () => {
+    setIsLoading(true); // Bắt đầu hiện icon xoay
+    
+    await loadData();
+    
+    setIsLoading(false); // Tắt icon xoay sau khi xong
+  }, [id, accessToken, specificTime, timeLine, tractionApp]);
 
   //3. Lọc danh và gom nhóm theo chữ cái
   const sections = useMemo(() => {
@@ -356,6 +373,9 @@ export default function HistoryScreen() {
 
   const navigation = useNavigation<HomeStackNavProp>();
 
+  if(isLoading)
+    return <LoadingLogo logoSource={require('../../../assets/images/welcome.png')}/>
+  else
   return (
     <View  style={styles.container}>
        <View style={{  backgroundColor:"#12D0FF", paddingBottom:30, paddingHorizontal:16, paddingTop: 10}}>
@@ -456,6 +476,14 @@ export default function HistoryScreen() {
               </View>
             )
           }}
+          refreshControl={
+            <RefreshControl 
+              refreshing={isLoading} 
+              onRefresh={onRefresh}
+              colors={[Colors.light.primary]} // Màu icon xoay trên Android
+              tintColor={Colors.light.primary} // Màu icon xoay trên iOS
+            />
+          }
         />
        </View>
 

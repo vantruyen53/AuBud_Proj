@@ -7,7 +7,8 @@ export interface CreateTransactionDTO {
   createdAt: string;
   note: string;
   title: string;
-  budgetId?:string
+  budgetId?:string,
+  handle:string,
 }
 
 export interface UpdateTransactionDTO extends Partial<CreateTransactionDTO> {

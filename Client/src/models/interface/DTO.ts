@@ -116,3 +116,11 @@ export interface BudgetDTO{
   status:'active' // | 'deleted'
 }
 
+
+
+export interface IMessage{
+  text: string,
+  createdAt: string,
+  from: string
+}
+

@@ -18,10 +18,6 @@ export class WalletService implements IWalleetService {
             if (walletId) url += `/${walletId}`;
             url += queryString;
 
-            console.log(url);
-            console.log({ ...data });
-
-            // đổi axios → apiFetch, bỏ headers
             const res = await apiFetch(url, {
                 method,
                 body: data ? JSON.stringify({ ...data, userId: this.user.id }) : undefined

@@ -1,4 +1,4 @@
-import {ScrollView,StyleSheet,Text,TouchableOpacity,View, ViewStyle, TextStyle, Alert} from "react-native";
+import {ScrollView,StyleSheet,Text,TouchableOpacity,View, ViewStyle, TextStyle, Alert, RefreshControl} from "react-native";
 import { useEffect, useMemo, useState,useCallback } from "react";
 import mockBudget from '@/src/store/seed/budget';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +14,7 @@ import { BudgetDTO, CategoryDTO } from "@/src/models/interface/DTO";
 import { BudgetApp } from "@/src/store/application/BudgetApp";
 import { useProvider } from "@/src/hooks/useProvider";
 import { Budgets } from "@/src/models/interface/Entities";
+import LoadingLogo from "@/src/components/loadingOverlay";
 
 export default function BudgetScreen() {
   const navigation = useNavigation<HomeStackNavProp>();
@@ -32,6 +33,7 @@ export default function BudgetScreen() {
   const [formData, setFormData] = useState<any>({})
 
   const [trigger, setTrigger]=useState(0)
+  const [isLoading, setIsLoading] = useState(false)
 
   const prevMonth = () => {
     setCurrentMonth(
@@ -52,17 +54,31 @@ export default function BudgetScreen() {
   ).getDate();
   const dateRange = `(01/${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${daysInMonth}/${String(currentMonth.getMonth() + 1).padStart(2, "0")})`;
 
+  const loadData = async ()=>{
+    const budgets = await budgetApp.getBudgets((currentMonth.getMonth()+1).toString(), currentMonth.getFullYear().toString());
+    if(budgets){
+      setBudget(budgets)
+    }
+  }
+
   useFocusEffect(
     useCallback( ()=>{
-      const fetch = async()=>{
-        const budgets = await budgetApp.getBudgets((currentMonth.getMonth()+1).toString(), currentMonth.getFullYear().toString());
-        if(budgets){
-          setBudget(budgets)
-        }
-      }
-      fetch();
+      const fetchData =async()=>{
+       setIsLoading(true)
+        await loadData();
+       setIsLoading(false)
+     }
+     fetchData()
     }, [currentMonth, trigger])
   )
+
+  const onRefresh = useCallback(async () => {
+    setIsLoading(true);
+    
+    await loadData();
+    
+    setIsLoading(false); 
+  }, [id, accessToken, currentMonth, ]);
 
   // Helper function để lấy màu thanh progress bar
   const getProgressBarColor = (percentage: number) => {
@@ -125,148 +141,162 @@ export default function BudgetScreen() {
     ]);
   };
 
-  return (
-    <View style={styles.container}>
-      {/* ===== HEADER BACKGROUND ===== */}
-      <View style={styles.headerBg}/>
+  if(isLoading)
+    return <LoadingLogo logoSource={require('../../assets/images/welcome.png')}/>
+  else
+    return (
+      <View style={styles.container}>
+        {/* ===== HEADER BACKGROUND ===== */}
+        <View style={styles.headerBg}/>
 
-      <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1 }}>
 
-        {/* ===== TOP NAVIGATION ===== */}
-        <View style={styles.navBar}>
-          <Text style={styles.navTitle}>Budget goal</Text>
-        </View>
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-           {/* ===== MONTH SELECTOR ===== */}
-          <View style={[styles.card, styles.shadow]}>
-             <TouchableOpacity onPress={prevMonth} style={styles.monthArrow}>
-              <MaterialIcons name="chevron-left" size={24} color={Colors.light.textSub} />
-            </TouchableOpacity>
-            <View style={styles.monthTextWrapper}>
-              <Text style={styles.monthText}>{monthYear}</Text>
-              <Text style={styles.dateRangeText}>{dateRange}</Text>
-            </View>
-            <TouchableOpacity onPress={nextMonth} style={styles.monthArrow}>
-              <MaterialIcons name="chevron-right" size={24} color={Colors.light.textSub} />
-            </TouchableOpacity>
+          {/* ===== TOP NAVIGATION ===== */}
+          <View style={styles.navBar}>
+            <Text style={styles.navTitle}>Budget goal</Text>
           </View>
 
-          {/* ===== ACCOUNT GAUGE CARD ===== */}
-          <View style={[styles.card, styles.shadow, styles.gaugeCard]}>
-            <View style={styles.gaugeContainer}>
-              <CategoryPieChart
-                data={budgets}
-                showLabel={false}
-                size={220}
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl 
+                refreshing={isLoading} 
+                onRefresh={onRefresh}
+                colors={[Colors.light.primary]} // Màu icon xoay trên Android
+                tintColor={Colors.light.primary} // Màu icon xoay trên iOS
               />
+            }
+          >
+            {/* ===== MONTH SELECTOR ===== */}
+            <View style={[styles.card, styles.shadow]}>
+              <TouchableOpacity onPress={prevMonth} style={styles.monthArrow}>
+                <MaterialIcons name="chevron-left" size={24} color={Colors.light.textSub} />
+              </TouchableOpacity>
+              <View style={styles.monthTextWrapper}>
+                <Text style={styles.monthText}>{monthYear}</Text>
+                <Text style={styles.dateRangeText}>{dateRange}</Text>
+              </View>
+              <TouchableOpacity onPress={nextMonth} style={styles.monthArrow}>
+                <MaterialIcons name="chevron-right" size={24} color={Colors.light.textSub} />
+              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* --- BUDGET CATEGORIES LIST --- */}
+            {/* ===== ACCOUNT GAUGE CARD ===== */}
+            <View style={[styles.card, styles.shadow, styles.gaugeCard]}>
+              <View style={styles.gaugeContainer}>
+                <CategoryPieChart
+                  data={budgets}
+                  showLabel={false}
+                  size={220}
+                />
+              </View>
+            </View>
 
-          {budgets.length<=0?<Text style={styles.noTransactionsText}>No budget in {monthYear}</Text>:
-          budgets.map((item)=>{
-            const remaining = item.target - item.balance;
-            const percentage =
-              item.target > 0
-                ? Math.round((item.balance / item.target) * 100)
-                : 0;
-            
-            return(
-              <TouchableOpacity key={item.id} style={styles.budgetCard} 
-                onPress={()=>{
-                  setFormData({...formData,budgetId:item.id, target:item.target, categoryName: item.category.name})
-                  setModalType('edit')
-                  setIsModalVisible(true)
-                }}
-                onLongPress={()=>handleDelete(item.id)}  
-                >
-                <View style={styles.budgetCardHeader}>
-                  <View style={[styles.categoryIconWrapper, { backgroundColor: `rgba(${item.category.iconColor},0.1)` }]}>
-                    <MaterialIcons
-                      name={item.category.iconName as any} 
-                      size={20}
-                      color={`rgb(${item.category.iconColor})`}
+            {/* --- BUDGET CATEGORIES LIST --- */}
+
+            {budgets.length<=0?<Text style={styles.noTransactionsText}>No budget in {monthYear}</Text>:
+            budgets.map((item)=>{
+              const remaining = item.target - item.balance;
+              const percentage =
+                item.target > 0
+                  ? Math.round((item.balance / item.target) * 100)
+                  : 0;
+              
+              return(
+                <TouchableOpacity key={item.id} style={styles.budgetCard} 
+                  onPress={()=>{
+                    setFormData({...formData,budgetId:item.id, target:item.target, categoryName: item.category.name})
+                    setModalType('edit')
+                    setIsModalVisible(true)
+                  }}
+                  onLongPress={()=>handleDelete(item.id)}  
+                  >
+                  <View style={styles.budgetCardHeader}>
+                    <View style={[styles.categoryIconWrapper, { backgroundColor: `rgba(${item.category.iconColor},0.1)` }]}>
+                      <MaterialIcons
+                        name={item.category.iconName as any} 
+                        size={20}
+                        color={`rgb(${item.category.iconColor})`}
+                      />
+                    </View>
+                    <Text style={styles.categoryName}>{item.category.name}</Text>
+                    <View style={styles.budgetCardRight}>
+                      <Text style={styles.remainingLabel}>Remain</Text>
+                      <Text style={styles.remainingAmount}>
+                        {formatCurrency(remaining,{absolute:true})}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={18} color={Colors.light.placeholder} />
+                  </View>
+                  <View style={styles.progressBarContainer}>
+                    <View
+                      style={[
+                        styles.progressBar,
+                        {
+                          width: `${Math.min(percentage, 100)}%`,
+                          backgroundColor: getProgressBarColor(percentage),
+                        },
+                      ]}
                     />
                   </View>
-                  <Text style={styles.categoryName}>{item.category.name}</Text>
-                  <View style={styles.budgetCardRight}>
-                    <Text style={styles.remainingLabel}>Remain</Text>
-                    <Text style={styles.remainingAmount}>
-                      {formatCurrency(remaining,{absolute:true})}
+                  <View style={styles.budgetCardFooter}>
+                    <Text style={styles.budgetLabel}>
+                      {formatCurrency(item.target, {absolute:true})}
+                    </Text>
+                    <Text style={styles.percentageText}>{percentage}%</Text>
+                    <Text style={styles.spentLabel}>
+                      {formatCurrency(item.balance)}
                     </Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={18} color={Colors.light.placeholder} />
-                </View>
-                <View style={styles.progressBarContainer}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${Math.min(percentage, 100)}%`,
-                        backgroundColor: getProgressBarColor(percentage),
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.budgetCardFooter}>
-                  <Text style={styles.budgetLabel}>
-                    {formatCurrency(item.target, {absolute:true})}
-                  </Text>
-                  <Text style={styles.percentageText}>{percentage}%</Text>
-                  <Text style={styles.spentLabel}>
-                    {formatCurrency(item.balance)}
-                  </Text>
-                </View>
+                </TouchableOpacity>
+              )
+            })}
+
+            {/* --- ADD BUDGET BUTTON --- */}
+            {canAdd && (
+              <TouchableOpacity
+                style={styles.addBudgetBtn}
+                onPress={() => {
+                  if (isTooFar) {
+                    Alert.alert(
+                      "Warning",
+                      "Bạn không thể lập ngân sách cho thời gian quá sớm!",[
+                      { text: "Got it", style: "cancel" }
+                    ]);
+                    return;
+                  }
+                  setIsModalVisible(true);
+                  setModalType('add');
+                }}
+              >
+                <MaterialIcons name="add-circle" size={24} color={Colors.light.primary} />
+                <Text style={styles.addBudgetText}>Add new budget</Text>
               </TouchableOpacity>
-            )
-          })}
+            )}
 
-          {/* --- ADD BUDGET BUTTON --- */}
-          {canAdd && (
-            <TouchableOpacity
-              style={styles.addBudgetBtn}
-              onPress={() => {
-                if (isTooFar) {
-                  Alert.alert(
-                    "Warning",
-                    "Bạn không thể lập ngân sách cho thời gian quá sớm!",[
-                    { text: "Got it", style: "cancel" }
-                  ]);
-                  return;
-                }
-                setIsModalVisible(true);
-                setModalType('add');
-              }}
-            >
-              <MaterialIcons name="add-circle" size={24} color={Colors.light.primary} />
-              <Text style={styles.addBudgetText}>Add new budget</Text>
-            </TouchableOpacity>
-          )}
-
-        </ScrollView>
-          <ModalBudget 
-            visible={isModalVisible}
-            onPressClose={()=>{setIsModalVisible(false),setFormData({})}}
-            onPressSave={()=>handleSave()}
-            onPressEdit={()=>handleEdit()}
-            formData={formData}
-            onChangeText={(target:number)=>setFormData({...formData, target})}
-            nav={()=>{
-              setIsModalVisible(false)
-              navigation.navigate('allCategory',{
-                  setSelectedCategory: (categorie: CategoryDTO) =>
-                    setFormData({...formData,categoryId: categorie.id, ...categorie}),
-                  setIsOpenCatNameInput:(status:boolean)=>
-                    setIsModalVisible(status)
-            })}}
-            type={modalType}
-          />
-        
-      </SafeAreaView>
-    </View>
-  )
+          </ScrollView>
+            <ModalBudget 
+              visible={isModalVisible}
+              onPressClose={()=>{setIsModalVisible(false),setFormData({})}}
+              onPressSave={()=>handleSave()}
+              onPressEdit={()=>handleEdit()}
+              formData={formData}
+              onChangeText={(target:number)=>setFormData({...formData, target})}
+              nav={()=>{
+                setIsModalVisible(false)
+                navigation.navigate('allCategory',{
+                    setSelectedCategory: (categorie: CategoryDTO) =>
+                      setFormData({...formData,categoryId: categorie.id, ...categorie}),
+                    setIsOpenCatNameInput:(status:boolean)=>
+                      setIsModalVisible(status)
+              })}}
+              type={modalType}
+            />
+          
+        </SafeAreaView>
+      </View>
+    )
 }
 
 const styles = StyleSheet.create({

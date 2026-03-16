@@ -4,6 +4,8 @@ import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 import { SECRET_KEY_STORE, API_URL } from "../constants/securityContants";
 import { setSessionExpiredCallback, setTokenRefreshedCallback } from "../services/auth/apiService";
+import { WalletScreenData } from "../store/application/WalletApp";
+import { WalletApp } from "@/src/store/application/WalletApp";
 
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -38,6 +40,22 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
   const [userName, setuserName] = useState('');
   const [email, setEmail] = useState('')
   const [isShowData, setIsShowData] = useState(true)
+  const [walletScreen, setWalletScreen] = useState<WalletScreenData>({
+    rawData: {
+        wallets: [],
+        savings: [],
+        debts: [],
+        groupFunds: [],
+      },
+      summary: {
+        totalWalletBalance: 0,
+        totalSavingBalance: 0,
+        totalGroupFundBalance: 0,
+        totalLoanFrom: 0,
+        totalLoanTo: 0,
+      },
+      totalNetWorth: 0,
+  })
 
   useEffect(() => {
     // Chạy một lần khi app khởi động — kiểm tra token còn hợp lệ không
@@ -160,9 +178,24 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
   };
 
   const toggleShowData = () =>{setIsShowData((pre)=> !pre)}
+
+  const refreshWallet = async (id:string, token:string) => {
+    const walletApp = new WalletApp({id, accessToken:token})
+    try {
+      const result = await walletApp.loadWalletScreenData(false);
+      if (result) {
+        setWalletScreen(result); // Cập nhật "nguồn sự thật duy nhất"
+      }
+    } catch (error) {
+      console.error("Lỗi khi load lại ví:", error);
+    }
+  };
   
   return(
-    <AppContext.Provider value={{isAuthenticated, isLoading, accessToken, refreshToken, id, userName, role, email, isShowData, signIn, signOut, toggleShowData}}>
+    <AppContext.Provider value={{
+      isAuthenticated, isLoading, accessToken, refreshToken, id, userName, role, email, isShowData, 
+      walletScreen,
+      signIn, signOut, toggleShowData,refreshWallet}}>
         {children}
     </AppContext.Provider>
   )

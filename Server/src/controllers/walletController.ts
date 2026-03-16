@@ -7,7 +7,7 @@ export class WalletController {
 
     getAll = async (req: any, res: any) => {
         try {
-            const { userId } = req.query ;
+            const userId = req.user.id;
             const result = await this.service.getAllByUserId(userId as string);
             return res.status(200).json(result);
         } catch (error: any) {
@@ -17,7 +17,8 @@ export class WalletController {
     }
     getById = async (req: any, res: any) =>{
         try{
-            const { userId, id } = req.query;
+            const userId = req.user.id;
+            const {id } = req.query;
             const result = await this.service.getById(userId, id);
             return res.status(200).json(result);
         } catch (error: any) {
@@ -28,8 +29,9 @@ export class WalletController {
 
     create = async (req: any, res: any) => {
         try {
+            const userId = req.user.id;
             const { actionType } = req.params;
-            const {walletHash, userId, encryptedNewBalance} = req.body;
+            const {walletHash, encryptedNewBalance} = req.body;
             if(encryptedNewBalance){
                 const result = await this.service.create(actionType as ActionTarget, walletHash, userId, encryptedNewBalance);
                 return res.status(200).json({ status: result });
@@ -57,7 +59,7 @@ export class WalletController {
     delete = async (req: any, res: any) => {
         try {
             const { actionType, walletId } = req.params;
-            const { userId } = req.query;
+            const userId = req.user.id;
             const result = await this.service.delete(
                 actionType as ActionTarget,
                 walletId,
@@ -104,7 +106,7 @@ export class WalletController {
     }
 
     deleteHistoryTransaction = async (req: any, res: any) => {
-        const {userId}=req.query;
+        const userId = req.user.id;
         const {wTransactionId, newBalanceHashed, paymentWalletId, encrytedNewWalletBalace}=req.body;
         const {actionType,walletId}=req.params;
          console.log('===================================')

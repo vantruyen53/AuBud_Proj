@@ -95,8 +95,8 @@ export class AuthServiceImpl implements IAuthService {
         .sendToMany(["in-app", "email"], {
           recipientId: account.userId,
           recipientEmail: account.email,   // ← thêm email
-          title: "Đăng nhập từ thiết bị mới",
-          body: `Tài khoản của bạn vừa đăng nhập từ thiết bị: ${deviceInfo}. Nếu không phải bạn, hãy đổi mật khẩu ngay.`,
+          title: "Log in from a new device",
+          body: `Your account was just logged in from device: ${deviceInfo}. If it's not you, change your password immediately..`,
           metadata: {
             previousDevice: lastDevice,
             currentDevice: deviceInfo,

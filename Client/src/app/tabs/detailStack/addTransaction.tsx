@@ -58,15 +58,15 @@ export default function AddTransactionScreen({route}:any) {
 
   const {hanldeType, payLoad}= route.params;
 
-  const { id, accessToken } = useProvider();
+  const { id, accessToken, walletScreen, refreshWallet } = useProvider();
   const walletApp = new WalletApp({ id: id, accessToken: accessToken });
   const categoryApp = new CategoryApp({id, accessToken})
   const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
 
   //DATA
-  const [wallets, setWallets] = useState<IWallet[]>([]);
-  const [savings, setSavings] = useState<ISaving[]>([]);
-  const [debts, setDebts] = useState<IDebt[]>([]);
+  const wallets = useMemo(() => walletScreen?.rawData.wallets || [], [walletScreen]);
+  const savings = useMemo(() => walletScreen?.rawData.savings || [], [walletScreen]);
+  const debts = useMemo(()=>walletScreen?.rawData.debts || [], [walletScreen])
 
   //HANLDE
   const [actionType, setActionType] = useState<"Income" | "Sending" | "Debt" | "Saving" | "Convert">(
@@ -139,14 +139,8 @@ export default function AddTransactionScreen({route}:any) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [walletData, categoryData]= await Promise.all([
-        await walletApp.loadWalletScreenData(false),
-        await categoryApp.getSuggestedCategory(),
-      ])
-      if (walletData && categoryData) {
-        setWallets(walletData.rawData.wallets);
-        setSavings(walletData.rawData.savings);
-        setDebts(walletData.rawData.debts);
+      const categoryData= await categoryApp.getSuggestedCategory();
+      if (categoryData) {
         setListSending(categoryData.catSending)
         setListIncome(categoryData.catIncome)
       }
@@ -216,6 +210,7 @@ export default function AddTransactionScreen({route}:any) {
             const result = await walletApp.convertBalance(payLoad, walletSelected.balance, walletTo.balance);
             if (result) clearForm();
           }
+          await refreshWallet(id, accessToken)
         } catch (err) {
           Alert.alert("Error", `Something went wrong ${err}`);
         }

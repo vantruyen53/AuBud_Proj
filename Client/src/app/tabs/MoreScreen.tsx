@@ -218,7 +218,7 @@ export default function MoreScreen() {
         <View style={fStyles.inputRow}>
           <TextInput
             style={fStyles.input}
-            placeholder="Nhập số tiền VND"
+            placeholder="Enter the amount VND"
             keyboardType="numeric"
             value={vndAmount}
             onChangeText={(val) => {
@@ -239,7 +239,7 @@ export default function MoreScreen() {
         {/* Updated at */}
         {marketData?.updatedAt && (
           <Text style={fStyles.updatedAt}>
-            {`Cập nhật: ${new Date(marketData.updatedAt).toLocaleTimeString('vi-VN')}`}
+            {`Update: ${new Date(marketData.updatedAt).toLocaleTimeString('vi-VN')}`}
           </Text>
         )}
 
@@ -262,15 +262,15 @@ export default function MoreScreen() {
         {/* Updated at */}
         {marketData?.updatedAt && (
           <Text style={gStyles.updatedAt}>
-            {`Cập nhật: ${new Date(marketData.updatedAt).toLocaleTimeString('vi-VN')}`}
+            {`Update: ${new Date(marketData.updatedAt).toLocaleTimeString('vi-VN')}`}
           </Text>
         )}
 
         {/* Table header */}
         <View style={gStyles.headerRow}>
-          <Text style={[gStyles.headerText, { flex: 2 }]}>Thương hiệu</Text>
-          <Text style={[gStyles.headerText, { flex: 1, textAlign: 'center' }]}>Mua vào</Text>
-          <Text style={[gStyles.headerText, { flex: 1, textAlign: 'right' }]}>Bán ra</Text>
+          <Text style={[gStyles.headerText, { flex: 2 }]}>Branch</Text>
+          <Text style={[gStyles.headerText, { flex: 1, textAlign: 'center' }]}>Buy prices</Text>
+          <Text style={[gStyles.headerText, { flex: 1, textAlign: 'right' }]}>Sell prices</Text>
         </View>
 
         {/* Danh sách giá vàng */}
@@ -293,7 +293,7 @@ export default function MoreScreen() {
         ))}
 
         {/* Ghi chú đơn vị */}
-        <Text style={gStyles.note}>* Đơn vị: nghìn đồng / chỉ vàng</Text>
+        <Text style={gStyles.note}>* Unit: thousand dong / gold tael</Text>
       </View>
     );
   };

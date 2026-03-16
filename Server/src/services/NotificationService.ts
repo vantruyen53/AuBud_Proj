@@ -125,7 +125,7 @@ export class InAppNotificationChannel implements INotificationChannel {
       // 1️⃣ Lưu vào DB trước (dù user online hay offline đều lưu)
       const saved = await this.notificationRepo.create({
         userId: payload.recipientId,
-        type: NotificationType.SYSTEM,
+        type: payload.type ?? NotificationType.SYSTEM,
         title: payload.title,
         description: payload.body,
         metadata: payload.metadata ?? null,

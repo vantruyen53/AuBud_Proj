@@ -64,7 +64,7 @@ const transactionService = new TransactionService(transactionRepo, userRepo);
 const transactionController = new TransactionController(transactionService);
 
 router.get("/aubud/api/v1/transaction",authenticateJWT,transactionController.getTransactions);
-router.get("/aubud/api/v1/summary", transactionController.getMonthlySpendingSummary)
+router.get("/aubud/api/v1/summary",authenticateJWT, transactionController.getMonthlySpendingSummary)
 router.post("/aubud/api/v1/transaction",authenticateJWT,transactionController.create,);
 router.put("/aubud/api/v1/transaction",authenticateJWT,transactionController.update,);
 router.delete("/aubud/api/v1/transaction",authenticateJWT,transactionController.delete,);
@@ -151,6 +151,14 @@ const feedbackService = new FeedbackService(pool)
 const feedbackController = new FeedbackController(feedbackService)
 
 router.post("/aubud/api/v1/feedback", authenticateJWT, feedbackController.send)
+
+
+//=====================CHAT API PROXY=====================
+import {validateChatBody, sanitizeChatInput } from '../middlewares/chatMiddleware.js';
+import { chatController } from "../controllers/chatController.js";
+
+router.post("/aubud/api/v1/chat", authenticateJWT, validateChatBody, sanitizeChatInput, chatController)
+
 
 
 //=================================API TEST RATE LIMIT========================

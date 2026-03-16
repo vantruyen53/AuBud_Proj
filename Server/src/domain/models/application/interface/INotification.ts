@@ -1,9 +1,11 @@
+import { NotificationType } from "../../../enums/appEnum.js";
 // TYPE 
 export type NotificationChannel = "email" | "push" | "in-app";
 export interface NotificationPayload {
   recipientId: string;       // userId
   recipientEmail?: string;   // dùng cho email
   deviceToken?: string;      // dùng cho push
+  type?:NotificationType,
   title: string;
   body: string;
   priority?: "low" | "normal" | "high";

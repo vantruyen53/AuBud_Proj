@@ -1,4 +1,4 @@
-import { Modal, KeyboardAvoidingView, Platform, View, Text, TouchableOpacity, TextInput, FlatList } from "react-native";
+import { Modal, KeyboardAvoidingView, Platform, View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl } from "react-native";
 import styles from "../assets/styles/modalStyle";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
@@ -662,7 +662,7 @@ export function ModalCategory({isModalVisible, setIsModalVisible, isEditing,
   )
 }
 
-export function ModalWalletHistory({isOpen, onPressClose, data, onDeleteItem}:any){
+export function ModalWalletHistory({isOpen, onPressClose, data, onDeleteItem, refreshing, isRefreshing}:any){
   const renderItem = ({item}:any)=>(
     <TransactionItem
       amount={item.amount}
@@ -694,6 +694,14 @@ export function ModalWalletHistory({isOpen, onPressClose, data, onDeleteItem}:an
             data={data}
             renderItem={(item)=>renderItem(item)}
             keyExtractor={item => item.id}
+            refreshControl={
+              <RefreshControl 
+                refreshing={isRefreshing} 
+                onRefresh={refreshing}
+                colors={[Colors.light.primary]} // Màu icon xoay trên Android
+                tintColor={Colors.light.primary} // Màu icon xoay trên iOS
+              />
+            }
           />
         </View>
       </View>

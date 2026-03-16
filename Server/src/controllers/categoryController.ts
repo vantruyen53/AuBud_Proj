@@ -5,7 +5,7 @@ export class CategoryController {
 
   getSuggestedCategory = async (req: any, res: any): Promise<void> =>{
     try {
-      const { userId } = req.params;
+      const userId = req.user.id;
       const data = await this.categoryService.getSuggetedCategory(userId);
       res.status(200).json({
         status: true,
@@ -21,7 +21,7 @@ export class CategoryController {
 
   getAllCategory=async (req: any, res: any): Promise<void>=>{
     try {
-      const { userId } = req.params;
+      const userId = req.user.id;
       const data = await this.categoryService.getAllCategory(userId);
       res.status(200).json({
         status: true,
@@ -75,7 +75,7 @@ export class CategoryController {
   deleteCategory=async (req: any, res: any): Promise<void>=>{
     try {
       const { categoryId } = req.params;
-      const userId= req.query.userId as string ?? req.body.userId;
+      const userId = req.user.id;;
       const result = await this.categoryService.deletedCategory(categoryId, userId);
       res.status(200).json({
         status: result,

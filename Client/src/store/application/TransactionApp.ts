@@ -83,7 +83,7 @@ export class TransactionApp{
         const totalIncome = decryptedData
             .filter(t => t.type === 'income')
             .reduce((sum, item) => sum + item.amount, 0);
-            
+    
         return {
             rawTransactions: decryptedData,
             totalSending,
@@ -117,7 +117,7 @@ export class TransactionApp{
         return {avgDaily, percent, isIncrease}
     }
     
-    async addTransaction(payLoad:CreateTransactionDTO, walletBalance:number){
+    async addTransaction(payLoad:CreateTransactionDTO, walletBalance:number, handlBy:'user'|'bot' = 'user'){
         if (!payLoad) return false;
 
         const newWatlletBalance = payLoad.type==="sending"?walletBalance-payLoad.amount:walletBalance+payLoad.amount
@@ -126,7 +126,9 @@ export class TransactionApp{
         const encryptedPayload = await encryptFormData(payLoad, secretKey);
         const encryptedNewBalance = await encryptData(newWatlletBalance.toString(), secretKey);
 
-        const result = await this.transactionService.addTransaction(encryptedPayload, encryptedNewBalance);
+        const data = {...encryptedPayload, handle:handlBy}
+
+        const result = await this.transactionService.addTransaction(data, encryptedNewBalance);
         return result;
     }
 

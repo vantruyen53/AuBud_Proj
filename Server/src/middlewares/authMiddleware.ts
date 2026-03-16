@@ -34,6 +34,7 @@ export function authenticateJWT(req: any, res: any, next: any) {
       .json({ message: `Invalid or expired token: ${error}` });
   }
 }
+
 export function loginValidation(req: any, res: any, next: any) {
   const { password, email } = req.body;
   try {

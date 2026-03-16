@@ -10,11 +10,13 @@ import type {
   ITransaction,
   ServerResult,IMonthlySummary
 } from "../../domain/entities/appEntities.js";
+import datetime from "../../utils/helpers/datetime.js";
 import type { Pool } from "mysql2/promise";
 import crypto from "crypto";
 
 export class TransactionRepository implements ITransactionRepository {
   private userRepo: IUserRepository
+  private datetime = datetime();
   constructor(private readonly pool: Pool) {
     this.userRepo = new UserRepositoris(pool)
   }
@@ -137,8 +139,8 @@ export class TransactionRepository implements ITransactionRepository {
 
       const id = crypto.randomUUID();
       const insertSql = `
-        INSERT INTO transaction (id, category_id, amount, user_id, wallet_id, created_at, note,budget_id, status, title, type)
-        VALUES (?, ?, ?, ?, ?, ?, ?,?, 'completed', ?, ?)
+        INSERT INTO transaction (id, category_id, amount, user_id, wallet_id, created_at, note,budget_id, status, title, type, handle_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?,?, 'completed', ?, ?, ?)
       `;
       await conn.execute(insertSql, [
         id,
@@ -146,11 +148,12 @@ export class TransactionRepository implements ITransactionRepository {
         data.amount,
         userId,
         data.walletId,
-        data.createdAt,
+        data.createdAt ?? this.datetime,
         data.note ?? null,
         data?.budgetId ?? null,
         data.title,
         data.type,
+        data.handle ?? 'user'
       ]);
 
       const updateBalanceSql = `
@@ -184,6 +187,8 @@ export class TransactionRepository implements ITransactionRepository {
   }
 
   async update(userId: string,data: UpdateTransactionDTO,): Promise<ServerResult> {
+    console.log('[Update transaction] Data update for: ', userId)
+    console.log(data)
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -191,7 +196,7 @@ export class TransactionRepository implements ITransactionRepository {
       const merged = {
         id: data.id,
         categoryId:  data.categoryId as string,
-        amount: data.amount as 'sending' | 'income',
+        amount: data.amount as string,
         type: data.type as string,
         walletId: data.walletId as string,
         createdAt: data.createdAt as string,
@@ -216,7 +221,7 @@ export class TransactionRepository implements ITransactionRepository {
         merged.walletId,
         merged.note,
         merged.title,
-        merged.createdAt,
+        merged.createdAt ?? this.datetime,
         merged.id,
         userId,
       ]);
@@ -233,9 +238,9 @@ export class TransactionRepository implements ITransactionRepository {
 
       //Cập nhật số dư cho ví mới
       const updateBalanceSql = `
-      UPDATE wallet SET balance = ? WHERE id = ? AND user_id = ?
-    `;
-      await conn.execute(backupBalanceSql, [
+        UPDATE wallet SET balance = ? WHERE id = ? AND user_id = ?
+      `;
+      await conn.execute(updateBalanceSql, [
         merged.newBalance,
         merged.newWalletId,
         userId,

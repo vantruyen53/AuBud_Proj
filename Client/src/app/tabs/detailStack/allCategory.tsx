@@ -1,6 +1,6 @@
-import {Text,View,TouchableOpacity,TextInput,ScrollView,Modal,KeyboardAvoidingView,Platform, StyleSheet, Alert, Animated} from "react-native";
+import {Text,View,TouchableOpacity,TextInput,RefreshControl,Modal,KeyboardAvoidingView,Platform, StyleSheet, Alert, Animated} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
 import {CategoryDTO } from "@/src/models/interface/DTO";
@@ -38,6 +38,8 @@ export default function AllCategory({route}:any) {
     const [listIncome, setListIncome] = useState<ICategory[]>([]);
 
     const[trigger, setTrigger]=useState(0)
+    const [isLoading, setIsLoading] = useState(false)
+
     const categoryApp = new CategoryApp({id, accessToken})
 
 
@@ -51,15 +53,24 @@ export default function AllCategory({route}:any) {
     });
 
     useEffect(()=>{
-        const fetch = async()=>{
-            const result = await categoryApp.getAllCategory()
+        loadData()
+    },[trigger])
+
+    const loadData = async ()=>{
+        const result = await categoryApp.getAllCategory()
             if(result){
                 setListSending(result.catSending);
                 setListIncome(result.catIncome);
-            }
         }
-        fetch();
-    },[trigger])
+    }
+
+    const onRefresh = useCallback(async () => {
+        setIsLoading(true); // Bắt đầu hiện icon xoay
+        
+        await loadData();
+        
+        setIsLoading(false); // Tắt icon xoay sau khi xong
+    }, [id, accessToken, ]);
 
     const clearForm = ()=>{
         setIsEditing(false)
@@ -270,16 +281,24 @@ export default function AllCategory({route}:any) {
 
             {/* category list  */}
             <SwipeListView
-                    useSectionList
-                    sections={sections as any}
-                    keyExtractor={(item: CategoryDTO) => item.id}
-                    rightOpenValue={-130}
-                    disableRightSwipe={true}
-                    swipeToOpenPercent={40}
-                    showsVerticalScrollIndicator={false}
-                    renderSectionHeader={renderSectionHeader}
-                    renderItem={renderItem}
-                    renderHiddenItem={renderHiddenItem}
+                useSectionList
+                sections={sections as any}
+                keyExtractor={(item: CategoryDTO) => item.id}
+                rightOpenValue={-130}
+                disableRightSwipe={true}
+                swipeToOpenPercent={40}
+                showsVerticalScrollIndicator={false}
+                renderSectionHeader={renderSectionHeader}
+                renderItem={renderItem}
+                renderHiddenItem={renderHiddenItem}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={isLoading} 
+                        onRefresh={onRefresh}
+                        colors={[Colors.light.primary]} // Màu icon xoay trên Android
+                        tintColor={Colors.light.primary} // Màu icon xoay trên iOS
+                    />
+                }
             />
 
             {/* fab  */}

@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert 
+  Alert, RefreshControl,
 } from "react-native";
 import { useState, useMemo, useEffect, useCallback  } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -33,6 +33,7 @@ import { ITransactionItem } from "@/src/models/interface/Entities";
 import { TransactionApp } from "@/src/store/application/TransactionApp";
 import {createIconAcc} from '@/src/utils/helper';
 import { useNotificationStore } from "../../store/application/NotificationStore";
+import LoadingLogo from "@/src/components/loadingOverlay";
  import { useNotification } from "../../hooks/useNotification";
  import { socketService } from "../../services/Socketservice";
  import { setSocketReconnectCallback } from "@/src/services/auth/apiService";
@@ -42,19 +43,19 @@ export default function HomeScreen() {
   const y = new Date().getFullYear();
   const m = new Date().getMonth() + 1;
   const d = new Date().getDate();
-  const { isShowData, toggleShowData, id, userName, accessToken } =useProvider();
+  const { isShowData, toggleShowData, id, userName, accessToken, refreshWallet } =useProvider();
   const tractionApp = new TransactionApp({ id: id, accessToken: accessToken });
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   // 1. State quản lý dữ liệu gốc
   const [allTransactions, setAllTransactions] = useState<ITransactionItem[]>([]);
   const [summary, setSummary] = useState({totalSending: 0,totalIncome: 0,balance: 0,});
-  const [isLoading, setIsLoading] = useState(true);
 
   // UI State
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>("sending");
   const [stateViewTransaction, setStateViewTransaction] = useState<"detail" | "chart">("chart");
   const [isModalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   //Handle data
   const [editingTx, setEditingTx] = useState<ITransactionItem | null>(null);
@@ -67,6 +68,21 @@ export default function HomeScreen() {
   const IconText = createIconAcc(userName);
 
   const [trigger, setTrigger]=useState(0)
+
+  const loadData = async()=>{
+    const [result] = await Promise.all([ 
+      await tractionApp.getTransactionHistory(0,m, y, 'month'),
+      await refreshWallet(id, accessToken)
+    ]);
+    if (result ) {
+      setAllTransactions(result.rawTransactions);
+      setSummary({
+        totalSending: result.totalSending,
+        totalIncome: result.totalIncome,
+        balance: result.balance,
+      });
+    }
+  }
 
   // ✅ Connect socket 1 lần duy nhất khi có accessToken
   useEffect(() => {
@@ -84,23 +100,24 @@ export default function HomeScreen() {
   usePushNotification(accessToken);
   useNotification(accessToken);
 
+  // Hàm xử lý khi người dùng vuốt xuống
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    
+    await loadData();
+    
+    setRefreshing(false);
+  }, [id, accessToken]);
+
   // 1. Lấy dữ liệu tổng quan cho summary card và mảng gốc để filter "transaction today"
   useFocusEffect(
     useCallback(() => {
-      const fetchData = async () => {
-        setIsLoading(true);
-        const result = await tractionApp.getTransactionHistory(0,m, y, 'month');
-        if (result) {
-          setAllTransactions(result.rawTransactions);
-          setSummary({
-            totalSending: result.totalSending,
-            totalIncome: result.totalIncome,
-            balance: result.balance,
-          });
-        }
-        setIsLoading(false);
-      };
-      fetchData();
+     const fetchData =async()=>{
+       setRefreshing(true)
+        await loadData();
+       setRefreshing(false)
+     }
+     fetchData()
     }, [m, y,trigger, accessToken])
   )
 
@@ -359,123 +376,134 @@ export default function HomeScreen() {
     </>
   );
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* Top Bar */}
-        <View style={{  backgroundColor:"#12D0FF", }}>
-          <SafeAreaView edges={["top"]} style={styles.navBar}>
-            <View style={styles.headerProfile}>
-              <View style={styles.headerAvatar}>
-                <Text style={styles.headerAvatarText}>{IconText}</Text>
-              </View>
-              <View style={styles.headerWelcome}>
-                <Text style={styles.headerGreeting}>Good morning,</Text>
-                <Text style={styles.headerUserName}>{displayName}</Text>
-              </View>
-            </View>
-            <View style={styles.topRight}>
-              {/* History  */}
-              <TouchableOpacity
-                style={styles.historyButton}
-                onPress={() => navigation.navigate("history")}
-              >
-                <MaterialIcons name="history-edu" size={22} color="#fff" />
-                <Text style={styles.historyText}>History</Text>
-              </TouchableOpacity>
-
-              {/* Notification  */}
-              <TouchableOpacity
-                style={styles.notification}
-                onPress={() => navigation.navigate('notifacation')}
-                activeOpacity={0.7}
-              >
-                 <Bell size={22} color="#fff" />
-
-                 {unreadCount > 0 && (
-                    <View style={styles.noteText}>
-                      <Text style={styles.badgeText}>
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </Text>
-                    </View>
-                  )}
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </View>
-        <View  style={styles.container}>
-          {/* Main Content Overlay */}
-          {stateViewTransaction === "detail" ? (
-            <SwipeListView
-              style={{paddingBottom:80}}
-              data={flattenedData}
-              keyExtractor={(item: ITransactionItem) => item.id}
-              ListHeaderComponent={renderHeader}
-              showsVerticalScrollIndicator={false}
-              rightOpenValue={-160}
-              disableRightSwipe={true}
-              swipeToOpenPercent={40}
-              renderItem={(data, rowMap) => (
-                <Transaction
-                  title={data.item.title}
-                  wallet={data.item.wallet}
-                  amount={formatCurrency(data.item.type==="sending"?Number(`-${data.item.amount}`):data.item.amount)}
-                  categoryName={data.item.category.name}
-                  iconName={data.item.category.iconName}
-                  iconColor={data.item.category.iconColor}
-                  type={data.item.type}
-                  showData={isShowData}
-                  handleDetail={() => {handleDetail(data.item);}}
-                />
-              )}
-              renderHiddenItem={(data, rowMap) => (
-                <View style={styles.hiddenContainer}>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(data.item)}
-                    style={[styles.deleteAction, {backgroundColor: '#EF4444'}]}
-                  >
-                    <Animated.View style={styles.deleteActionContent}>
-                      <Text style={styles.deleteActionText}>Delete</Text>
-                    </Animated.View>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleEdit(data.item)}
-                    style={[styles.deleteAction, {backgroundColor:"#37bcff"}]}
-                  >
-                    <Animated.View style={styles.deleteActionContent}>
-                      <Text style={styles.deleteActionText}>Edit</Text>
-                    </Animated.View>
-                  </TouchableOpacity>
+  if(refreshing)
+    return <LoadingLogo logoSource={require('../../assets/images/welcome.png')}/>
+  else
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+          {/* Top Bar */}
+          <View style={{  backgroundColor:"#12D0FF", }}>
+            <SafeAreaView edges={["top"]} style={styles.navBar}>
+              <View style={styles.headerProfile}>
+                <View style={styles.headerAvatar}>
+                  <Text style={styles.headerAvatarText}>{IconText}</Text>
                 </View>
-              )}
+                <View style={styles.headerWelcome}>
+                  <Text style={styles.headerGreeting}>Good morning,</Text>
+                  <Text style={styles.headerUserName}>{displayName}</Text>
+                </View>
+              </View>
+              <View style={styles.topRight}>
+                {/* History  */}
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => navigation.navigate("history")}
+                >
+                  <MaterialIcons name="history-edu" size={22} color="#fff" />
+                  <Text style={styles.historyText}>History</Text>
+                </TouchableOpacity>
+
+                {/* Notification  */}
+                <TouchableOpacity
+                  style={styles.notification}
+                  onPress={() => navigation.navigate('notifacation')}
+                  activeOpacity={0.7}
+                >
+                  <Bell size={22} color="#fff" />
+
+                  {unreadCount > 0 && (
+                      <View style={styles.noteText}>
+                        <Text style={styles.badgeText}>
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </View>
+          <View  style={styles.container}>
+            {/* Main Content Overlay */}
+            {stateViewTransaction === "detail" ? (
+              <SwipeListView
+                style={{paddingBottom:80}}
+                data={flattenedData}
+                keyExtractor={(item: ITransactionItem) => item.id}
+                ListHeaderComponent={renderHeader}
+                showsVerticalScrollIndicator={false}
+                rightOpenValue={-160}
+                disableRightSwipe={true}
+                swipeToOpenPercent={40}
+                renderItem={(data, rowMap) => (
+                  <Transaction
+                    title={data.item.title}
+                    wallet={data.item.wallet}
+                    amount={formatCurrency(data.item.type==="sending"?Number(`-${data.item.amount}`):data.item.amount)}
+                    categoryName={data.item.category.name}
+                    iconName={data.item.category.iconName}
+                    iconColor={data.item.category.iconColor}
+                    type={data.item.type}
+                    showData={isShowData}
+                    handleDetail={() => {handleDetail(data.item);}}
+                  />
+                )}
+                renderHiddenItem={(data, rowMap) => (
+                  <View style={styles.hiddenContainer}>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(data.item)}
+                      style={[styles.deleteAction, {backgroundColor: '#EF4444'}]}
+                    >
+                      <Animated.View style={styles.deleteActionContent}>
+                        <Text style={styles.deleteActionText}>Delete</Text>
+                      </Animated.View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleEdit(data.item)}
+                      style={[styles.deleteAction, {backgroundColor:"#37bcff"}]}
+                    >
+                      <Animated.View style={styles.deleteActionContent}>
+                        <Text style={styles.deleteActionText}>Edit</Text>
+                      </Animated.View>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={[Colors.light.primary]} // Android
+                    tintColor={Colors.light.primary} // iOS
+                  />
+                }
+              />
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {renderHeader()}
+              </ScrollView>
+            )}
+
+            {/* Floating Action Button - Sky Blue */}
+            <FloatAddBtn
+              name="edit"
+              size="24"
+              navigation={() => navigation.navigate("addTransaction",{})}
             />
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {renderHeader()}
-            </ScrollView>
-          )}
 
-          {/* Floating Action Button - Sky Blue */}
-          <FloatAddBtn
-            name="edit"
-            size="24"
-            navigation={() => navigation.navigate("addTransaction",{})}
-          />
-
-          {/* Edit Transaction Modal */}
-          <ModalForm
-            isVisible={isModalVisible}
-            type="transaction"
-            onPressClose={() => setModalVisible(false)}
-            onPressDelete={() =>
-              handleDelete(editingTx as ITransactionItem)
-            }
-            onPressSave={() => {
-              handleSave();
-            }}
-            formData={formData}
-            setFormData={setFormData}
-          />
-        </View>
-    </GestureHandlerRootView>
-  );
+            {/* Edit Transaction Modal */}
+            <ModalForm
+              isVisible={isModalVisible}
+              type="transaction"
+              onPressClose={() => setModalVisible(false)}
+              onPressDelete={() =>
+                handleDelete(editingTx as ITransactionItem)
+              }
+              onPressSave={() => {
+                handleSave();
+              }}
+              formData={formData}
+              setFormData={setFormData}
+            />
+          </View>
+      </GestureHandlerRootView>
+    );
 }

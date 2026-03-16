@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { ScrollView, RefreshControl, Text, TouchableOpacity, View, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
@@ -16,29 +16,25 @@ import { useProvider } from "@/src/hooks/useProvider";
 import { extractWallet } from '@/src/utils/helper';
 import { ModalForm, ModalWalletHistory, ModalWallet } from '@/src/components/customModal';
 import { CreateDebtDTO } from '@/src/models/interface/DTO';
+import { Colors } from '@/src/constants/theme';
 
 
 export default function WalletScreen() {
   // 1. State quản lý dữ liệu gốc
-  const [wallets, setWallets] = useState<IWallet[]>([]);
-  const [savings, setSavings] = useState<ISaving[]>([]);
   const [groupFunds, setGroupFunds] = useState<IGroupFund[]>([]);
-  const [debts, setDebts] = useState<IDebt[]>([]);
   const [walletHistories, setWalletHistoies]=useState<any[]|null>([])
 
   //mỗi thao tác CRUD thành công gọi triggerRefresh() để re-render view
   const [refreshKey, setRefreshKey] = useState(0);
-  const { isShowData, toggleShowData, id, accessToken } = useProvider();
-  const [totalData, setTotalData]=useState<{w:number, s:number, gF:number, lf:number, lt:number, tNW: number}>({
-    w:0, s:0, gF:0, lf:0, lt:0, tNW:0
-  });
-
+  const { isShowData, toggleShowData, id, accessToken, walletScreen, refreshWallet } = useProvider();
   // Modal states
   const [isModalVisible, setModalVisible] = useState(false);
   const [isTypeModalVisible, setTypeModalVisible] = useState(false);
   const [isOpenModalHistory, setIsOpenModalHistory]= useState(false);
   const [isOpenWalletsForCreateDebt, setIsOpenWalletsForCreateDebt]= useState(false);
   const [modalType, setModalType] = useState<'wallet' | 'saving' | 'group' | 'debt' | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [historyRefreshing, setHistoryRefreshing] = useState(false);
 
   //Handle data
   const [formData, setFormData] = useState<any>(null);
@@ -49,25 +45,31 @@ export default function WalletScreen() {
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
   const walletApp = new WalletApp({id:id, accessToken:accessToken})
 
+  const wallets = useMemo(() => walletScreen?.rawData.wallets || [], [walletScreen]);
+  const savings = useMemo(() => walletScreen?.rawData.savings || [], [walletScreen]);
+  const debts = useMemo(()=>walletScreen?.rawData.debts || [], [walletScreen])
+
+  const totalData = useMemo(() => ({
+    w: walletScreen?.summary.totalWalletBalance || 0,
+    s: walletScreen?.summary.totalSavingBalance || 0,
+    gF:walletScreen?.summary.totalGroupFundBalance || 0,
+    lf:walletScreen?.summary.totalLoanFrom || 0, 
+    lt:walletScreen?.summary.totalLoanTo || 0, 
+    tNW:walletScreen?.totalNetWorth || 0
+    // ... các trường khác
+  }), [walletScreen]);
+
   useFocusEffect(
     useCallback(()=>{
-      const fetchData = async ()=>{
-        const result =await walletApp.loadWalletScreenData(false)
-        if(result){
-          setWallets(result.rawData.wallets)
-          setSavings(result.rawData.savings)
-          setGroupFunds(result.rawData.groupFunds)
-          setDebts(result.rawData.debts)
-
-          setTotalData({
-            w:result.summary.totalWalletBalance, s:result.summary.totalSavingBalance, gF:result.summary.totalGroupFundBalance,
-            lf:result.summary.totalLoanFrom, lt:result.summary.totalLoanTo, tNW:result.totalNetWorth
-          })
-        }
-      }
-      fetchData();
-    },[refreshKey])
+       refreshWallet(id, accessToken);
+    },[])
   )
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true); // Bắt đầu hiện icon xoay
+    await refreshWallet(id, accessToken);
+    setRefreshing(false); // Tắt icon xoay sau khi xong
+  }, [id, accessToken]);
 
   const handleDelete = (type: string, walletId: string) => {
     Alert.alert(
@@ -80,9 +82,11 @@ export default function WalletScreen() {
           style: "destructive",
           onPress: async () => {
             const result = await walletApp.deleteWallet(walletId, type as 'wallet' | 'saving' | 'debt')
-            if(result)
+            if(result){
               triggerRefresh()
               setModalVisible(false);
+              await refreshWallet(id, accessToken);
+            }
           }
         }
       ]
@@ -120,6 +124,7 @@ export default function WalletScreen() {
           if(reslut)
             triggerRefresh() 
         }
+        await refreshWallet(id, accessToken);
         setModalVisible(false)
       } catch (err) {
         Alert.alert("Error", `Something went wrong ${err}`)
@@ -135,12 +140,27 @@ export default function WalletScreen() {
     setTypeAction(typeAction)
   };
 
-  const handleOpenHistory =async (walletId:string, walletType:string)=>{
+  const handleOpenHistory =async (id: string, actionType: string)=>{
     setIsOpenModalHistory(true)
+    setHistoryRefreshing(true);
+      try {
+      const result = await walletApp.getWalletHistory(id, actionType);
+      setWalletHistoies(result);
+    } catch (error) {
+      console.log("Lỗi tải lịch sử:", error);
+    } finally {
+      setHistoryRefreshing(false);
+    }
+  }
 
-    const result = await walletApp.getWalletHistory(walletId, walletType)
+  const onRefreshHistory = async()=>{
+    if (!historyWallet.id) return;
+    setHistoryRefreshing(true)
+
+    const result = await walletApp.getWalletHistory(historyWallet.id, historyWallet.actionType)
     
-    setWalletHistoies(result)
+    setWalletHistoies(result);
+    setHistoryRefreshing(false);
   }
 
   const hanldDeleteItem = async (itemId:string, amount:string, walletId:string, type:string)=>{
@@ -224,6 +244,14 @@ export default function WalletScreen() {
             style={styles.content}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                colors={[Colors.light.primary]} // Màu icon xoay trên Android
+                tintColor={Colors.light.primary} // Màu icon xoay trên iOS
+              />
+            }
           >
             {/* Wallets Section */}
             {wallets.length>0&&
@@ -467,10 +495,12 @@ export default function WalletScreen() {
           data={walletHistories}
           onDeleteItem={hanldDeleteItem}
           typeAction="history"
+          refreshing={onRefreshHistory}
+          isRefreshing={historyRefreshing}
         />
 
         {isOpenWalletsForCreateDebt&&<ModalWallet
-                    onPressClose={() => {
+          onPressClose={() => {
                       setIsOpenWalletsForCreateDebt((pre) => !pre);
                     }}
                     data={wallets}
@@ -479,8 +509,8 @@ export default function WalletScreen() {
                       setWalletForCreateDebt({id:id,name:name, balance});
                       setFormData({ ...formData, paymentWalletId: id,});
                       setModalVisible(true);
-                    }}
-                  />}
+          }}
+        />}
 
       </View>
     </GestureHandlerRootView>

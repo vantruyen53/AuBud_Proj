@@ -129,7 +129,6 @@ export class WalletApp{
 
   async updateWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO| undefined) {
     if (!wallet) return false;
-      
     const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
 
     const encryptedPayload = await encryptFormData(wallet, secretKey);
@@ -144,6 +143,7 @@ export class WalletApp{
       const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
       const encryptedPayload = await encryptFormData(wallet, secretKey);
 
+      //balance of wallet which used for transaction payment, e.g cash, mbbanl, shopeepay,...
       if(newPaymentWalletBalance){  
         const toStr = newPaymentWalletBalance?.toString() as string
         const encryptedNewBalance = await encryptData(toStr, secretKey)
