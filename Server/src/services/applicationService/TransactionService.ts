@@ -28,7 +28,7 @@ export class TransactionService {
     return await this.transactionRepo.update(userId, data)
   }
 
-  async removeTransaction(userId: string, id: string, newBackupBalance:string) {
-    return await this.transactionRepo.delete(userId, id, newBackupBalance);
+  async removeTransaction(userId: string, id: string, newBackupBalance:string, handleBy:'bot'|'user') {
+    return await this.transactionRepo.delete(userId, id, newBackupBalance, handleBy);
   }
 }

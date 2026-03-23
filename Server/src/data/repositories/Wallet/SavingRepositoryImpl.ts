@@ -2,6 +2,7 @@ import type { Pool,RowDataPacket } from "mysql2/promise";
 import type{ISavingRepository} from '../../../domain/models/application/repository/IWalletRepository.js';
 import type{SavingEntity, SavingHistoryEntity} from '../../../domain/entities/appEntities.js';
 import type { CreateSavingDTO, UpdateSavingDTO,CreateSavingTransactionDTO } from "../../DTO/AppDTO.js";
+import { LogService } from "../../../services/systemLogService.js";
 
 export class SavingRepository implements ISavingRepository {
     constructor(private pool: Pool) {}
@@ -112,8 +113,15 @@ export class SavingRepository implements ISavingRepository {
             await conn.commit();
 
             return (result as any).affectedRows > 0;
-        }catch (error) {
+        }catch (error:any) {
             await conn.rollback();
+            await LogService.write({
+                message: `SavingRepository.createHistory failed: ${error.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'saving_repo.create_history.error',
+                metaData: { error: error.message, stack: error.stack } as any,
+            });
+  console.error("Create Transaction Error:", error);
             console.error("Create Transaction Error:", error);
             return false;
         } finally {
@@ -141,8 +149,14 @@ export class SavingRepository implements ISavingRepository {
             else
                 return false
 
-        }catch (error) {
+        }catch (error:any) {
             await conn.rollback();
+            await LogService.write({
+                message: `SavingRepository.deleteHistory failed: ${error.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'saving_repo.delete_history.error',
+                metaData: { error: error.message, stack: error.stack } as any,
+            });
             console.error("Create Transaction Error:", error);
             return false;
         } finally {

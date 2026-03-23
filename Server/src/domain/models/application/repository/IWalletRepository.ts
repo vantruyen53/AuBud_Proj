@@ -17,8 +17,8 @@ export interface IWalletRepositoryFactory {
 export interface IBaseRepository<TEntity, TCreateDTO, TUpdateDTO> {
     findAllByUserId(userId: string): Promise<TEntity[]>;
     findById(userId:string, id:string): Promise<TEntity | null>
-    create(dto: TCreateDTO, userId:string, encryptedNewBalance?:string): Promise<boolean>;
-    update(dto: TUpdateDTO): Promise<boolean>;
+    create(dto: TCreateDTO, handleBy:'bot'|'user', userId:string, encryptedNewBalance?:string): Promise<boolean>;
+    update(dto: TUpdateDTO,handleBy?:'bot'|'user'): Promise<boolean>;
     delete(id: string, userId: string): Promise<boolean>;
 }
 

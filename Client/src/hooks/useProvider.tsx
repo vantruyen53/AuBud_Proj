@@ -122,6 +122,8 @@ export const AppProvider = ({children}:{children: ReactNode})=>{
         const data = await response.json();
         console.log("[tryRefresh] data keys:", Object.keys(data));
 
+        console.log("[tryRefresh] data user:", {...data.user});
+
         await signIn(data.accessToken, data.refreshToken, data.user.email);
     } catch(e)  {
         console.log("[tryRefresh] error:", e);

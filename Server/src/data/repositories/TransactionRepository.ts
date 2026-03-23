@@ -13,6 +13,8 @@ import type {
 import datetime from "../../utils/helpers/datetime.js";
 import type { Pool } from "mysql2/promise";
 import crypto from "crypto";
+import { usageStatsRepository } from '../../data/repositories/usageStatsRepoImpl.js';
+import { LogService } from "../../services/systemLogService.js";
 
 export class TransactionRepository implements ITransactionRepository {
   private userRepo: IUserRepository
@@ -21,8 +23,8 @@ export class TransactionRepository implements ITransactionRepository {
     this.userRepo = new UserRepositoris(pool)
   }
 
-  async find(userId: string,query: TransactionQueryDTO,): Promise<ITransaction[]> {
-    const { day, month, year, categoryId } = query;
+  async find(userId: string,query: TransactionQueryDTO): Promise<ITransaction[]> {
+    const { day, month, year, categoryId, handleBy } = query;
 
     let sql = `
     SELECT 
@@ -123,7 +125,14 @@ export class TransactionRepository implements ITransactionRepository {
       });
 
       return { currentPeriod, lastPeriod };
-    } catch (error) {
+    } catch (error:any) {
+       await LogService.write({
+        message: `getMonthlySpendingSummary failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'transaction_repo.monthly_summary.error',
+        actorId: userId,
+        metaData: { error: error.message, stack: error.stack } as any,
+      });
       console.error("Create Transaction Error:", error);
       return {
         currentPeriod: [],
@@ -136,6 +145,9 @@ export class TransactionRepository implements ITransactionRepository {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
+
+      if(data.handle==='user')
+        usageStatsRepository.incrementManual().catch(() => {});
 
       const id = crypto.randomUUID();
       const insertSql = `
@@ -174,8 +186,15 @@ export class TransactionRepository implements ITransactionRepository {
         status: true,
         message: "Add successfully",
       };
-    } catch (error) {
+    } catch (error:any) {
         await conn.rollback();
+        await LogService.write({
+          message: `TransactionRepository.create failed: ${error.message}`,
+          actor_type: 'system', type: 'error', status: 'failure',
+          actionDetail: 'transaction_repo.create.error',
+          actorId: userId,
+          metaData: { error: error.message, stack: error.stack } as any,
+        });
         console.error("Create Transaction Error:", error);
         return {
           status: false,
@@ -186,13 +205,14 @@ export class TransactionRepository implements ITransactionRepository {
     }
   }
 
-  async update(userId: string,data: UpdateTransactionDTO,): Promise<ServerResult> {
-    console.log('[Update transaction] Data update for: ', userId)
-    console.log(data)
+  async update(userId: string,data: UpdateTransactionDTO): Promise<ServerResult> {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
       
+      if(data.handle==='user')
+        usageStatsRepository.incrementManual().catch(() => {});
+
       const merged = {
         id: data.id,
         categoryId:  data.categoryId as string,
@@ -251,8 +271,15 @@ export class TransactionRepository implements ITransactionRepository {
         status: true,
         message: "Update successfully",
       };
-    } catch (error) {
+    } catch (error:any) {
       await conn.rollback();
+      await LogService.write({
+        message: `TransactionRepository.update failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'transaction_repo.update.error',
+        actorId: userId,
+        metaData: { error: error.message, stack: error.stack } as any,
+      });
       console.error("Update Transaction Error:", error);
       return {
         status: false,
@@ -263,10 +290,13 @@ export class TransactionRepository implements ITransactionRepository {
     }
   }
 
-  async delete(userId: string, id: string, newBackupBalance:string): Promise<ServerResult> {
+  async delete(userId: string, id: string, newBackupBalance:string, handleBy:'bot'|'user'): Promise<ServerResult> {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
+
+      if(handleBy==='user')
+        usageStatsRepository.incrementManual().catch(() => {});
 
       const getTxSql = `SELECT wallet_id FROM transaction WHERE id = ? AND user_id = ? AND status = 'completed'`;
       const [tx]: any = await conn.execute(getTxSql, [id, userId]);
@@ -295,8 +325,15 @@ export class TransactionRepository implements ITransactionRepository {
         status: true,
         message: "Delete successfully",
       };
-    } catch (error) {
+    } catch (error:any) {
       await conn.rollback();
+       await LogService.write({
+        message: `TransactionRepository.delete failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'transaction_repo.delete.error',
+        actorId: userId,
+        metaData: { error: error.message, stack: error.stack } as any,
+      });
       console.error("Delete Transaction Error:", error);
       return {
         status: false,

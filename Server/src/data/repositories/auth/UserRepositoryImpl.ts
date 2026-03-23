@@ -3,7 +3,14 @@ import type { IUserRepository } from "../../../domain/models/auth/IUserRepositor
 import type { Pool, PoolConnection } from "mysql2/promise";
 import type { RowDataPacket } from "mysql2/promise";
 import {ServerResult} from '../../../domain/entities/appEntities.js';
+import { LogService } from "../../../services/systemLogService.js";
 
+
+export interface UserToSendNotifi{
+   id:string,
+  email:string
+  device:string
+}
 /**
  * @param offset  - bắt đầu từ dòng thứ mấy
  * @param limit   - lấy bao nhiêu dòng mỗi batch (mặc định 100)
@@ -64,7 +71,7 @@ export default class UserRepositoris implements IUserRepository {
         SELECT a.*, u.user_name 
         FROM account a
         INNER JOIN user u ON a.user_id = u.id
-        WHERE a.email = ? LIMIT 1
+        WHERE a.email = ? AND a.status !='deleted' LIMIT 1
     `;
     const [rows] = await this.pool.execute<RowDataPacket[]>(sql, [email]);
 
@@ -116,6 +123,17 @@ export default class UserRepositoris implements IUserRepository {
     else return null;
   }
 
+  async getUserToSendNotifi():Promise<UserToSendNotifi[]>{
+    const sql = `SELECT a.user_id as id, a.email, t.device_info as device FROM account INNER JOIN token t ON t.user_id = a.user_id
+    WHERE role = 'user' AND status ='active' AND verified = 1`
+    const [rows] = await this.pool.execute<RowDataPacket[]>(sql);
+    return rows.map(d=>({
+      id:d.id,
+      email:d.email,
+      device:d.device
+    }));
+  }
+
   async updateAccountStatus(id: string, status: string): Promise<void> {
     const sql = `UPDATE account SET status = ? WHERE id = ?`;
     await this.pool.execute(sql, [status, id]);
@@ -126,7 +144,13 @@ export default class UserRepositoris implements IUserRepository {
       const sql = `UPDATE account SET verified = true WHERE email = ?`;
       await this.pool.execute(sql, [email]);
       return true;
-    } catch (err) {
+    } catch (err:any) {
+      await LogService.write({
+        message: `verifyAcc failed for email: ${email} — ${err.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'user_repo.verify_acc.error',
+        metaData: { email, error: err.message, stack: err.stack } as any,
+      });
       console.log("User repository verify acc error: ", err);
       return false;
     }
@@ -150,7 +174,13 @@ export default class UserRepositoris implements IUserRepository {
         true,
         "Cập nhật mật khẩu và encrypted secret key user thành công",
       );
-    } catch (err) {
+    } catch (err:any) {
+      await LogService.write({
+        message: `updatePassword failed for email: ${email} — ${err.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'user_repo.update_password.error',
+        metaData: { email, error: err.message, stack: err.stack } as any,
+      });
       return new ServerResult(false, `Cập nhật mật khẩu thất bại: ${err}`);
     }
   }
@@ -193,10 +223,21 @@ export default class UserRepositoris implements IUserRepository {
   async updateLastLogin(userId:string){
     const dateTime = new Date();
     try{
+      //phải gọi `trackDailyTraffic` **trước** `UPDATE last_login`, vì hàm track dựa vào `last_login` cũ để quyết định có tăng count không.
+      console.log('Call trackDailyTraffic')
+      await this.trackDailyTraffic(userId)
+      
       const updateSql = `UPDATE account SET last_login = ?  WHERE user_id = ?`
       await this.pool.execute(updateSql, [dateTime, userId])
       return true
-    } catch (err){
+    } catch (err:any){
+      await LogService.write({
+        message: `updateLastLogin failed for userId: ${userId} — ${err.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'user_repo.update_last_login.error',
+        actorId: userId,
+        metaData: { error: err.message, stack: err.stack } as any,
+      });
       console.error(err)
       return false
     }
@@ -205,6 +246,7 @@ export default class UserRepositoris implements IUserRepository {
   async updateLastInput(userId:string, conn?: PoolConnection){
     const dateTime = new Date();
     try{
+
       const updateSql = `UPDATE user SET last_input = ?  WHERE id = ?`
       const executor = conn ?? this.pool;
       await executor.execute(updateSql, [dateTime, userId])
@@ -222,6 +264,7 @@ export default class UserRepositoris implements IUserRepository {
         FROM user u
         INNER JOIN account a ON a.user_id = u.id
         WHERE 
+          a.role = 'user'
           a.status != 'ban'
           AND a.verified = 1
           AND (
@@ -234,7 +277,6 @@ export default class UserRepositoris implements IUserRepository {
       return rows as { userId: string; email: string; userName: string }[];
   }
 
-  // repo — thêm method mới
   async updateKeyBundle(
     userId: string,
     salt: string,
@@ -247,5 +289,49 @@ export default class UserRepositoris implements IUserRepository {
       WHERE user_id = ?
     `;
     await this.pool.execute(sql, [salt, encryptedSecretKey_user, encryptedSecretKey_server, userId]);
+  }
+
+  async trackDailyTraffic(userId: string): Promise<void> {
+    try {
+      const checkSql = `
+        SELECT DATE(last_login) as last_date 
+        FROM account 
+        WHERE user_id = ?
+      `;
+      const [rows]: any = await this.pool.execute(checkSql, [userId]);
+      
+      console.log("[Traffic] rows:", rows);  // ← thêm log này
+      
+      if (!rows || rows.length === 0) return;
+
+      const lastLoginDate = rows[0].last_date;
+      console.log("[Traffic] lastLoginDate:", lastLoginDate);  // ← và này
+      
+      const isToday = lastLoginDate && 
+        new Date(lastLoginDate).toDateString() === new Date().toDateString();
+      
+      console.log("[Traffic] isToday:", isToday);  // ← và này
+
+      if (!isToday) {
+        const trafficSql = `
+          INSERT INTO traffic (id, traffic_count, y_m_d, updated_at)
+          VALUES (UUID(), 1, CURDATE(), NOW())
+          ON DUPLICATE KEY UPDATE
+            traffic_count = traffic_count + 1,
+            updated_at = NOW()
+        `;
+        await this.pool.execute(trafficSql);
+        console.log("[Traffic] incremented");  // ← và này
+      }
+    } catch (err:any) {
+      await LogService.write({
+        message: `trackDailyTraffic failed for userId: ${userId} — ${err.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'user_repo.traffic_tracking.error',
+        actorId: userId,
+        metaData: { error: err.message, stack: err.stack } as any,
+      });
+      console.error("[TrafficTracking Error]", err);
+    }
   }
 }

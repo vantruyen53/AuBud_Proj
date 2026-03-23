@@ -64,19 +64,19 @@ export class WalletService implements IWalleetService {
 
     // TRIỂN KHAI CÁC HÀM INTERFACE
 
-    async addWallet(walletHash: EncryptedDTO, encryptedNewBalance?:string): Promise<boolean> {
+    async addWallet(walletHash: EncryptedDTO, handleBy:'bot'|'user', encryptedNewBalance?:string): Promise<boolean> {
         if (!walletHash) return false;
         if(encryptedNewBalance){
-            const res = await this._multiRequest("POST", {walletHash, encryptedNewBalance}, walletHash.actionType);
+            const res = await this._multiRequest("POST", {walletHash, encryptedNewBalance, handleBy}, walletHash.actionType);
             return res.status;
         }
 
         const res = await this._multiRequest("POST", {walletHash}, walletHash.actionType);
         return res.status;
     }
-    async updateWallet(walletHash: EncryptedDTO): Promise<boolean> {
+    async updateWallet(walletHash: EncryptedDTO, handleBy:'bot'|'user'): Promise<boolean> {
         if (!walletHash) return false;
-        const res = await this._multiRequest("PUT", {walletHash}, walletHash.actionType, walletHash.id);
+        const res = await this._multiRequest("PUT", {walletHash, handleBy}, walletHash.actionType, walletHash.id);
         return res.status;
     }
     async deleteWallet(walletId: string, actionType: 'wallet' | 'saving' | 'debt'): Promise<boolean> {

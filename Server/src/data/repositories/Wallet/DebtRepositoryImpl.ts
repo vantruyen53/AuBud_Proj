@@ -2,6 +2,7 @@ import type{IDebtRepository} from '../../../domain/models/application/repository
 import type { Pool,RowDataPacket } from "mysql2/promise";
 import type{DebtEntity, DebtHistoryEntity} from '../../../domain/entities/appEntities.js';
 import type { CreateDebtDTO, UpdateDebtDTO,CreateDebtTransactionDTO } from "../../DTO/AppDTO.js";
+import { LogService } from '../../../services/systemLogService.js';
 
 export class DebtRepository implements IDebtRepository {
     constructor(private pool: Pool) {}
@@ -57,8 +58,14 @@ export class DebtRepository implements IDebtRepository {
             if((result as any).affectedRows > 0 && (uResult as any).affectedRows > 0)
                 return true
             else return false;
-        }catch (error) {
+        }catch (error:any) {
             await conn.rollback();
+            await LogService.write({
+                message: `DebtRepository.create failed: ${error.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'debt_repo.create.error',
+                metaData: { error: error.message, stack: error.stack, userId } as any,
+            });
             console.error("Create Transaction Error:", error);
             return false;
         } finally {
@@ -78,7 +85,13 @@ export class DebtRepository implements IDebtRepository {
                 dto.remaining as string, dto.id, dto.userId
             ]);
             return (result as any).affectedRows > 0;
-        } catch(err){
+        } catch(err:any){
+            await LogService.write({
+                message: `DebtRepository.update failed: ${err.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'debt_repo.update.error',
+                metaData: { error: err.message, stack: err.stack } as any,
+            });
             console.error(err)
             return false;
         }
@@ -138,8 +151,14 @@ export class DebtRepository implements IDebtRepository {
 
             await conn.commit();
             return (result as any).affectedRows > 0;
-        }catch (error) {
+        }catch (error:any) {
             await conn.rollback();
+            await LogService.write({
+                message: `DebtRepository.createHistory failed: ${error.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'debt_repo.create_history.error',
+                metaData: { error: error.message, stack: error.stack } as any,
+            });
             console.error("Create Transaction Error:", error);
             return false;
         } finally {
@@ -168,8 +187,14 @@ export class DebtRepository implements IDebtRepository {
             else
                 return false
 
-        }catch (error) {
+        }catch (error:any) {
             await conn.rollback();
+             await LogService.write({
+                message: `DebtRepository.deleteHistory failed: ${error.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'debt_repo.delete_history.error',
+                metaData: { error: error.message, stack: error.stack } as any,
+            });
             console.error("Delete Transaction Error:", error);
             return false;
         } finally {
@@ -177,17 +202,3 @@ export class DebtRepository implements IDebtRepository {
         }
     }
 }
-// {
-//   walletHash: {
-//     name: '{"ciphertext":"Vk2Z","iv":"1Bp4nRj3F4bOS7rF","tag":"Io83ivv2aWRFTTVgdLyyjQ=="}',
-//     type: 'loan_from',
-//     partnerName: '{"ciphertext":"G09sWA==","iv":"LY3ixMFVv0eJZ5TH","tag":"mLgGnWVAl2Z6mNNgK+iZSA=="}',
-//     totalAmount: '{"ciphertext":"XzqaQpYUJQ==","iv":"Tkgzt8m7EnIjiKns","tag":"eStViMHZsdw8BbrlsUvpKQ=="}',
-//     status: 'active',
-//     createdAt: '2026-3-6 13:59:31',
-//     actionType: 'debt',
-//     paymentWalletId: '6d072c8a-a28c-41a4-a18d-b536cf1b5cd8'
-//   },
-//   encryptedNewBalance: '{"ciphertext":"8h8xTQEhgg==","iv":"SfST4GEPkBta742P","tag":"KFFFgje9eYqPCRFdBgWo8g=="}',
-//   userId: 'e72ee11c-1b99-44a5-a8e3-9dc6204a2a80'
-// }

@@ -3,6 +3,8 @@ import type{ Pool, RowDataPacket } from 'mysql2/promise';
 import type{ IWalletRepository } from '../../../domain/models/application/repository/IWalletRepository.js';
 import type{ WalletEntity } from '../../../domain/entities/appEntities.js';
 import type{ CreateWalletDTO, UpdateWalletDTO } from '../../DTO/AppDTO.js';
+import { usageStatsRepository } from '../../../data/repositories/usageStatsRepoImpl.js';
+
 
 export class WalletRepository implements IWalletRepository {
     constructor(private pool: Pool) {}
@@ -32,7 +34,10 @@ export class WalletRepository implements IWalletRepository {
         return rows[0] as WalletEntity;
     }
 
-    async create(dto: CreateWalletDTO): Promise<boolean> {
+    async create(dto: CreateWalletDTO, handleBy:'bot'|'user'): Promise<boolean> {
+        if(handleBy==='user')
+            usageStatsRepository.incrementManual().catch(() => {});
+
         const sql = `INSERT INTO wallet (id, name, balance, create_at, user_id, status)
             VALUES (?, ?, ?, ?, ?, ?) `;
         const id = crypto.randomUUID();
@@ -42,7 +47,10 @@ export class WalletRepository implements IWalletRepository {
         return (result as any).affectedRows > 0;
     }
 
-    async update(dto: UpdateWalletDTO): Promise<boolean> {
+    async update(dto: UpdateWalletDTO, handleBy:'bot'|'user'): Promise<boolean> {
+        if(handleBy==='user')
+            usageStatsRepository.incrementManual().catch(() => {});
+
         const sql = `
             UPDATE wallet
             SET name = ?, balance = ?

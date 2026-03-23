@@ -75,19 +75,19 @@ export class TransactionService implements ITransactionService {
 
         return result.status;
     }
-    async deleteTransaction(transactionId: string, newBackupBalance:string): Promise<boolean> {
-        const result = await this._mutationRequest("DELETE", newBackupBalance, { id: transactionId });
+    async deleteTransaction(transactionId: string, newBackupBalance:string, handleBy:'user'|'bot'): Promise<boolean> {
+        const result = await this._mutationRequest("DELETE", newBackupBalance, { id: transactionId, handleBy});
         return result.status ? true : false;
     }
 
-    async getByDayService(day: number, month: number, year: number) {
-        return this._getData({ day, month, year });
+    async getByDayService(day: number, month: number, year: number, handleBy:'bot'|'user') {
+        return this._getData({ day, month, year, handleBy });
     }
-    async getByMonthService(month: number, year: number) {
-        return this._getData({ month, year });
+    async getByMonthService(month: number, year: number, handleBy:'bot'|'user') {
+        return this._getData({ month, year, handleBy });
     }
-    async getByYearService(year: number) {
-        return this._getData({ year });
+    async getByYearService(year: number, handleBy:'bot'|'user') {
+        return this._getData({ year, handleBy });
     }
     async getByCategoryService(categoryId: string) {
         return this._getData({ categoryId });

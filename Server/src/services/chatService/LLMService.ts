@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { LogService } from '../systemLogService.js';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -18,8 +19,17 @@ export interface GeminiResponse {
 }
 
 export const callGemini = async ({ systemPrompt, message }: CallGeminiParams): Promise<GeminiResponse> => {
+  const start = Date.now();
   try {
     console.log('=== callGemini start, message:', message);
+     await LogService.write({
+      message: 'Gemini API call initiated',
+      actor_type: 'system',
+      type: 'ai',
+      status: 'pending',
+      actionDetail: 'ai.gemini.call',
+      metaData: { messageLength: message.length } as any,
+    });
     
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-lite-preview',
@@ -31,16 +41,39 @@ export const callGemini = async ({ systemPrompt, message }: CallGeminiParams): P
     });
 
     const raw =  response.text;
+    const duration = Date.now() - start;
     console.log('[Gemini] Gemini raw:', raw);
 
     if (!raw) throw new Error('Gemini trả về response rỗng');
+
+    await LogService.write({
+      message: 'Gemini API response received successfully',
+      actor_type: 'system',
+      type: 'ai',
+      status: 'success',
+      actionDetail: 'ai.gemini.response',
+      metaData: { durationMs: duration, responseLength: raw.length } as any,
+    });
 
     try {
       return JSON.parse(raw) as GeminiResponse;
     } catch {
       return { type: 'reply', message: raw, command: null };
     }
-  } catch (error) {
+  } catch (error:any) {
+    const duration = Date.now() - start;
+    await LogService.write({
+      message: `Gemini API call failed: ${error.message}`,
+      actor_type: 'system',
+      type: 'ai',
+      status: 'failure',
+      actionDetail: 'ai.gemini.call.failed',
+      metaData: {
+        error: error.message,
+        durationMs: duration,
+        // Không log systemPrompt hay message — có thể chứa data nhạy cảm
+      } as any,
+    });
     console.log('=== callGemini ERROR:', error); // ← bắt lỗi ở đây
     throw error;
   }

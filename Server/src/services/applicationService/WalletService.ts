@@ -5,6 +5,7 @@ import type { ConvertDTO } from "../../data/DTO/AppDTO.js";
 import type { WalletEntity } from "../../domain/entities/appEntities.js";
 import  type{ Pool } from "mysql2/promise";
 import pool from "../../config/dbConfig.js";
+import { LogService } from "../systemLogService.js";
 
 export class WalletService implements IWalletService {
     private p:Pool = pool
@@ -25,17 +26,17 @@ export class WalletService implements IWalletService {
         return result;
     }
 
-    async create(target: ActionTarget, dto: any, userId:string, encryptedNewBalance?:string): Promise<boolean> {
+    async create(target: ActionTarget,handleBy:'bot'|'user', dto: any, userId:string, encryptedNewBalance?:string): Promise<boolean> {
         console.log(target)
         console.log(dto)
         if(encryptedNewBalance)
-            return await this.factory.getRepo(target).create(dto,userId, encryptedNewBalance);
+            return await this.factory.getRepo(target).create(dto,handleBy,userId, encryptedNewBalance);
         else
-            return await this.factory.getRepo(target).create(dto,userId);
+            return await this.factory.getRepo(target).create(dto,handleBy,userId);
     }
 
-    async update(target: ActionTarget, dto: any): Promise<boolean> {
-        return await this.factory.getRepo(target).update(dto);
+    async update(target: ActionTarget,handleBy:'bot'|'user', dto: any): Promise<boolean> {
+        return await this.factory.getRepo(target).update(dto, handleBy);
     }
 
     async delete(target: ActionTarget, id: string, userId: string): Promise<boolean> {
@@ -84,8 +85,20 @@ export class WalletService implements IWalletService {
 
             await conn.commit();
             return (result as any).affectedRows > 0;
-        } catch (err) {
+        } catch (err:any) {
             await conn.rollback();
+            await LogService.write({
+                message: `Wallet convert failed: ${err.message}`,
+                actor_type: 'system', type: 'error', status: 'failure',
+                actionDetail: 'wallet.convert.service_error',
+                actorId: dto.userId,
+                metaData: {
+                    error: err.message,
+                    stack: err.stack,
+                    fromWalletId: dto.fromWalletId,
+                    toWalletId: dto.toWalletId,
+                } as any,
+                });
             console.error('Convert failed:', err);
             return false;
         } finally {

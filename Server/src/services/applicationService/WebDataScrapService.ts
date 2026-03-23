@@ -4,7 +4,7 @@ import type{ IMarketDataResponse, IForeignCurrencyRaw, IGoldPriceRaw } from '../
 import type{ IMarketService } from '../../domain/models/application/interface/IWebDataScrapeService.js';
 import { allPagesUrl } from '../../data/local/allContries.js';
 import type { Pool } from 'mysql2/promise';
-import datetime from '../../utils/helpers/datetime.js';
+import { LogService } from '../systemLogService.js';
 
 export class MarketService implements IMarketService {
   constructor(private pool: Pool) {}
@@ -78,7 +78,17 @@ export class MarketService implements IMarketService {
         conn.release();
       }
 
-    } catch (error) {
+    } catch (error:any) {
+      await LogService.write({
+        message: `scrapeAndSaveForeignCurrency failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'market.scrape.foreign_currency.error',
+        metaData: {
+          error: error.message,
+          stack: error.stack,
+          // third-party timeout sẽ hiện ở đây
+        } as any,
+      });
       console.error('[Market] scrapeAndSaveForeignCurrency error:', error);
     }
   }
@@ -124,7 +134,13 @@ export class MarketService implements IMarketService {
         conn.release();
       }
 
-    } catch (error) {
+    } catch (error:any) {
+      await LogService.write({
+        message: `scrapeAndSaveGoldPrice failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'market.scrape.gold_price.error',
+        metaData: { error: error.message, stack: error.stack } as any,
+      });
       console.error('[Market] scrapeAndSaveGoldPrice error:', error);
     }
   }

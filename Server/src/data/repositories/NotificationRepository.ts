@@ -39,32 +39,44 @@ export class NotificationRepository {
     const id = uuidv4();
     const now = new Date();
 
-    const sql = `
-      INSERT INTO notification
-        (id, for_user_id, type, title, contents, is_read, create_at, metadata)
-      VALUES (?, ?, ?, ?, ?, 0, ?, ?)
-    `;
+    try{
+      const sql = `
+        INSERT INTO notification
+          (id, for_user_id, type, title, contents, is_read, create_at, metadata)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+      `;
 
-    await pool.execute<ResultSetHeader>(sql, [
-      id,
-      params.userId,
-      params.type,
-      params.title,
-      params.description,
-      now,
-      params.metadata ? JSON.stringify(params.metadata) : null,
-    ]);
+      await pool.execute<ResultSetHeader>(sql, [
+        id,
+        params.userId,
+        params.type,
+        params.title,
+        params.description,
+        now,
+        params.metadata ? JSON.stringify(params.metadata) : null,
+      ]);
 
-    return {
-      id,
-      userId: params.userId,
-      type: params.type,
-      title: params.title,
-      description: params.description,
-      time: now.toISOString(),
-      isRead: false,
-      metadata: params.metadata ?? null,
-    };
+      return {
+        id,
+        userId: params.userId,
+        type: params.type,
+        title: params.title,
+        description: params.description,
+        time: now.toISOString(),
+        isRead: false,
+        metadata: params.metadata ?? null,
+      };
+    } catch(err:any){
+      console.error("[In-app Repo] Error: ", err.message)
+      return {id,
+        userId: params.userId ??"error id",
+        type: params.type ??"error type",
+        title: params.title ??"error title",
+        description: params.description ??"error description",
+        time: now.toISOString() ??"error time",
+        isRead: false ,
+        metadata: params.metadata ?? {error:"error metadata"},}
+    }
   }
 
   /**

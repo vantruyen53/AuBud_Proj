@@ -11,12 +11,12 @@ interface GeminiResponse {
 }
 
 export class ChatBotService {
-  async post(message: string,wallets: any[],context?: string): Promise<GeminiResponse | null> {
+  async post(message: string,wallets: any[],context?: string, isFollowUp: boolean = false): Promise<GeminiResponse | null> {
     console.log('Prepare fetch mess to server: ', message)
     try {
       const response = await apiFetch('/chat', {
         method: "POST",
-        body: JSON.stringify({ message, wallets, context }),
+        body: JSON.stringify({ message, wallets, context, isFollowUp }),
       });
 
       if (!response.ok) return null;

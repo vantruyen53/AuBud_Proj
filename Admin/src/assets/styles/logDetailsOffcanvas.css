@@ -1,0 +1,300 @@
+/* logDetailsOffcanvas.css */
+.log-offcanvas-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.log-offcanvas-panel {
+  position: fixed;
+  top: 0;
+  right: -500px; /* Initially hidden */
+  width: 500px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 1001;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.log-offcanvas-panel.open {
+  right: 0;
+}
+
+.log-offcanvas-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.log-offcanvas-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-offcanvas-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a2332;
+  margin: 0;
+}
+
+.log-offcanvas-subtitle {
+  font-size: 13px;
+  color: #8e99a8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  margin-top: 4px;
+}
+
+.log-btn-icon {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #5a6477;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.log-btn-icon:hover {
+  background: #f0f1f4;
+  color: #1a2332;
+}
+
+/* body */
+.log-offcanvas-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.log-offcanvas-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Badges */
+.log-badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.log-badge--error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.log-badge--warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+.log-badge--info {
+  background: #d5ecff;
+  color: #4299e1;
+}
+.log-badge--ai {
+  background: #d4fffd;
+  color: #38b2ac;
+}
+.log-badge--auth {
+  background: #f1f5f9;
+  color: #a0aec0;
+}
+
+.log-badge--default {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.log-offcanvas-timestamp {
+  font-size: 13px;
+  color: #8e99a8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.log-offcanvas-message {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2332;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.log-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8e99a8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.log-user-context {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #f0f1f4;
+}
+
+.log-user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.log-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.log-user-meta {
+  font-size: 13px;
+  color: #5a6477;
+}
+
+.log-metadata-section {
+  position: relative;
+}
+
+.log-metadata-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.log-metadata-header .log-section-label {
+  margin-bottom: 0;
+}
+
+.log-copy-btn {
+  background: transparent;
+  border: none;
+  color: #ea580c;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+.log-copy-btn:hover {
+  text-decoration: underline;
+}
+
+.log-code-block {
+  background: #1e293b;
+  color: #4ade80;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Footer */
+.log-offcanvas-footer {
+  padding: 24px;
+  border-top: 1px solid #e4e7ec;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #f8fafc;
+}
+
+.log-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.log-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.log-footer-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8e99a8;
+  text-transform: uppercase;
+}
+.log-footer-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.log-footer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.log-btn-primary, .log-btn-secondary {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.log-btn-primary {
+  background: #334155;
+  color: #fff;
+  border: none;
+}
+.log-btn-primary:hover {
+  background: #1e293b;
+}
+
+.log-btn-secondary {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #1a2332;
+}
+.log-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}

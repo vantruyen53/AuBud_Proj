@@ -127,15 +127,15 @@ export class WalletApp{
     return await this.walletService.deleteWallet(walletId, actionType);
   }
 
-  async updateWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO| undefined) {
+  async updateWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO| undefined, handleBy:'bot'|'user'="user") {
     if (!wallet) return false;
     const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
 
     const encryptedPayload = await encryptFormData(wallet, secretKey);
-    return await this.walletService.updateWallet(encryptedPayload)
+    return await this.walletService.updateWallet(encryptedPayload, handleBy)
   }
 
-  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, newPaymentWalletBalance?:number) {
+  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, handleBy:'bot'|'user'="user", newPaymentWalletBalance?:number) {
     if (!wallet) return false;
 
     console.log(wallet)
@@ -148,10 +148,10 @@ export class WalletApp{
         const toStr = newPaymentWalletBalance?.toString() as string
         const encryptedNewBalance = await encryptData(toStr, secretKey)
         
-        return await this.walletService.addWallet(encryptedPayload, encryptedNewBalance)
+        return await this.walletService.addWallet(encryptedPayload,handleBy, encryptedNewBalance)
       }
       
-      return await this.walletService.addWallet(encryptedPayload)
+      return await this.walletService.addWallet(encryptedPayload, handleBy)
   }
 
   async addWalletTransaction(walletTransaction: DebtTransactionDTO | SavingTransactionDTO, walletBalance:number, remaingOrBalance:number){

@@ -2,6 +2,7 @@ import type { ITokenRepository } from "../../../domain/models/auth/ITokenReposit
 import pool from "../../../config/dbConfig.js";
 import type { RowDataPacket } from "mysql2";
 import {ServerResult} from '../../../domain/entities/appEntities.js';
+import { LogService } from "../../../services/systemLogService.js";
 
 export default class TokenRepositoryImpl implements ITokenRepository {
   async saveToken(
@@ -23,7 +24,13 @@ export default class TokenRepositoryImpl implements ITokenRepository {
       const sql = `DELETE FROM token WHERE token_hash = ?`;
       await pool.execute(sql, [tokenHash]);
       return new ServerResult(true, "Logout successful, token revoked");
-    } catch (err) {
+    } catch (err:any) {
+       await LogService.write({
+        message: `deleteToken failed: ${err.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'token.delete.error',
+        metaData: { error: err.message, stack: err.stack } as any,
+      });
       return new ServerResult(false, `Delete token errore: ${err}`);
     }
   }

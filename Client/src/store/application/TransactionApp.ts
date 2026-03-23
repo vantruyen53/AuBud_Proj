@@ -45,11 +45,11 @@ export class TransactionApp{
         return d
     }
 
-    async getTransactionHistory(date:number,month: number, year: number, since:string){
+    async getTransactionHistory(date:number,month: number, year: number, since:string, handleBy:'user'|'bot' = 'user'){
         const serviceMap: Record<string, () => Promise<ITransactionItem[] | null>> = {
-            day:   () => this.transactionService.getByDayService(date, month, year),
-            month: () => this.transactionService.getByMonthService(month, year),
-            year:  () => this.transactionService.getByYearService(year),
+            day:   () => this.transactionService.getByDayService(date, month, year, handleBy),
+            month: () => this.transactionService.getByMonthService(month, year, handleBy),
+            year:  () => this.transactionService.getByYearService(year, handleBy),
         };
 
         const data = await (serviceMap[since]?.() ?? Promise.resolve([]));
@@ -132,17 +132,19 @@ export class TransactionApp{
         return result;
     }
 
-    async updateTransaction(payLoad:any, oldWallet:object, newWallet:object){
+    async updateTransaction(payLoad:any, oldWallet:object, newWallet:object, handlBy:'user'|'bot' = 'user'){
         if (!payLoad) return false;
         const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
         const encryptedPayload = await encryptFormData(payLoad, secretKey);
         const encryptedOldWallet = await encryptFormData(oldWallet, secretKey);
         const encryptedNewWallet = await encryptFormData(newWallet, secretKey);
 
-        return await this.transactionService.updateTransaction(encryptedPayload, encryptedOldWallet, encryptedNewWallet);
+        const data = {...encryptedPayload, handle:handlBy}
+
+        return await this.transactionService.updateTransaction(data, encryptedOldWallet, encryptedNewWallet);
     }
 
-    async deleteTransaction(transaction:ITransactionItem){
+    async deleteTransaction(transaction:ITransactionItem, handleBy:'user'|'bot' = 'user'){
         const wallet = await this.walletService.getById(transaction.walletId as string);
         const walletBalance = wallet.balance;
 
@@ -156,7 +158,7 @@ export class TransactionApp{
         const encryptedNewBalance = await encryptData(backupBalance.toString(), secretKey);
 
 
-        const result = await this.transactionService.deleteTransaction(transaction.id, encryptedNewBalance)
+        const result = await this.transactionService.deleteTransaction(transaction.id, encryptedNewBalance, handleBy)
         return result;
     }
 }

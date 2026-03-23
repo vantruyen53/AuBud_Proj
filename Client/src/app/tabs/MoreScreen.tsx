@@ -31,7 +31,9 @@ interface IUser{
   email:string,
 }
 interface FeedbackUIProps {
+  rating: number;
   text: string;
+  setRating: (value: number) => void;
   setText: (value: string) => void;
   onSend: () => void;
 }
@@ -51,7 +53,9 @@ export default function MoreScreen() {
 
   const [vndAmount, setVndAmount] = useState('');
   const [marketData, setMarketData] = useState<IMarketDataResponse | null>(null);
+
   const [feedback, setFeedback]=useState<string>('');
+  const [rating, setRating] = useState<number>(0)
 
   
   const iconAcc = createIconAcc(user.name);
@@ -297,51 +301,73 @@ export default function MoreScreen() {
       </View>
     );
   };
-  const renderFeedbackUI = ({ text, setText, onSend }: FeedbackUIProps) =>{
-    const MAX_CHARS = 200;
-    const isOverLimit = text.length >= MAX_CHARS;
-    const isDisabled = text.trim().length === 0 || isOverLimit;
+  
+  const renderFeedbackUI = ({ rating, setRating, text, setText, onSend }: FeedbackUIProps) => {
+  const MAX_CHARS = 200;
+  const isOverLimit = text.length >= MAX_CHARS;
+  const isDisabled = text.trim().length === 0 || isOverLimit || rating === 0;
 
-    return (
-      <View style={fbStyles.container}>
-        <View style={[
-          fbStyles.inputWrapper, 
-          isOverLimit && fbStyles.inputWarning
-        ]}>
-          <TextInput
-            style={fbStyles.input}
-            placeholder="What are you thinking?"
-            placeholderTextColor="#999"
-            multiline={true}           // Cho phép xuống dòng
-            textAlignVertical="top"    // Bắt đầu chữ từ đỉnh ô input
-            maxLength={MAX_CHARS}      // Chặn không cho nhập quá 200
-            value={text}
-            onChangeText={setText}
-          />
-          
-          <Text style={[
-            fbStyles.charCount,
-            isOverLimit && fbStyles.charCountWarning
-          ]}>
-            {text.length}/{MAX_CHARS}
-          </Text>
-        </View>
-
-        <TouchableOpacity 
-          style={[fbStyles.sendButton, isDisabled && fbStyles.sendButtonDisabled]}
-          onPress={onSend}
-          disabled={isDisabled}
-          activeOpacity={0.7}
-        >
-          <Text style={fbStyles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
+  return (
+    <View style={fbStyles.container}>
+      {/* Phần Đánh giá Sao */}
+      <Text style={fbStyles.label}>Mức độ hài lòng của bạn:</Text>
+      <View style={fbStyles.ratingContainer}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <TouchableOpacity 
+            key={star} 
+            onPress={() => setRating(star)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons
+              name={star <= rating ? "star" : "star-outline"}
+              size={40}
+              color={star <= rating ? "#FFD700" : "#E0E0E0"} // Vàng đậm vs Vàng nhạt/Xám
+              style={fbStyles.starIcon}
+            />
+          </TouchableOpacity>
+        ))}
       </View>
-    );
-  }
+
+      {/* Phần Nhập Text */}
+      <View style={[
+        fbStyles.inputWrapper, 
+        isOverLimit && fbStyles.inputWarning
+      ]}>
+        <TextInput
+          style={fbStyles.input}
+          placeholder="Chia sẻ thêm về trải nghiệm của bạn..."
+          placeholderTextColor="#999"
+          multiline={true}
+          textAlignVertical="top"
+          maxLength={MAX_CHARS}
+          value={text}
+          onChangeText={setText}
+        />
+        
+        <Text style={[
+          fbStyles.charCount,
+          isOverLimit && fbStyles.charCountWarning
+        ]}>
+          {text.length}/{MAX_CHARS}
+        </Text>
+      </View>
+
+      <TouchableOpacity 
+        style={[fbStyles.sendButton, isDisabled && fbStyles.sendButtonDisabled]}
+        onPress={onSend}
+        disabled={isDisabled}
+      >
+        <Text style={fbStyles.sendButtonText}>Gửi phản hồi</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
   const handleSendFeedback= async()=>{
-    const result = await feedbackService.send(feedback);
+    const result = await feedbackService.send(feedback, rating);
     if(result){
+      setRating(0);
+      setFeedback('')
       setModalVisibe(false)
     } else{
       Alert.alert("Error", "Some thing went wrong! Please try later");
@@ -469,7 +495,7 @@ export default function MoreScreen() {
                 {modalContent==='de' && renderDebtList()}
                 {modalContent === 'foc' && renderForeignCurrency()}
                 {modalContent === 'gol' && renderGoldPrice()}
-                {modalContent ==='fe' && renderFeedbackUI({text: feedback, setText: setFeedback, onSend: handleSendFeedback})}
+                {modalContent ==='fe' && renderFeedbackUI({rating, setRating,text: feedback, setText: setFeedback, onSend: handleSendFeedback})}
               </ScrollView>
             </View>
           </KeyboardAvoidingView>
@@ -919,6 +945,20 @@ const gStyles = StyleSheet.create({
 const fbStyles = StyleSheet.create({
   container: {
     width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  starIcon: {
+    marginHorizontal: 4,
   },
   inputWrapper: {
     backgroundColor: '#f9f9f9',

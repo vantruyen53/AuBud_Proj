@@ -32,6 +32,7 @@ import {
   deriveKEK,
   newEncryptSecretKeyWithKEK,
 } from "../utils/helpers/RSA.js";
+import { LogService } from "./systemLogService.js";
 
 export interface GoogleProfile {
   email: string;
@@ -50,7 +51,7 @@ export class AuthServiceImpl implements IAuthService {
     this.notificationStrategy = new NotificationStrategy(
       NotificationChannelFactory,
     );
-  }
+  } 
 
   // --- 1. LOGIN ---
   async login(data: LoginDTO, deviceInfo: string) {
@@ -84,28 +85,43 @@ export class AuthServiceImpl implements IAuthService {
       deviceInfo,
     );
 
-    const lastDevice = await this.tokenService.findLastDeviceByUserId(account.userId,);
-    console.log("[Login] lastDevice:", lastDevice);
-    console.log("[Login] currentDevice:", deviceInfo);
+    if(account.role==='user'){
+      const lastDevice = await this.tokenService.findLastDeviceByUserId(account.userId,);
+      console.log("[Login] lastDevice:", lastDevice);
+      console.log("[Login] currentDevice:", deviceInfo);
 
-    if (lastDevice && lastDevice !== deviceInfo) {
-      // Thiết bị khác nhau → gửi in-app notification lẫn email song song
-      // Không await để không block response về client
-      this.notificationStrategy
-        .sendToMany(["in-app", "email"], {
-          recipientId: account.userId,
-          recipientEmail: account.email,   // ← thêm email
-          title: "Log in from a new device",
-          body: `Your account was just logged in from device: ${deviceInfo}. If it's not you, change your password immediately..`,
-          metadata: {
+      if (lastDevice && lastDevice !== deviceInfo) {
+        LogService.write({
+          message: `Suspicious login detected for userId: ${account.userId} — new device`,
+          actor_type: 'user',
+          type: 'auth',
+          status: 'success', // login vẫn thành công, nhưng đáng chú ý
+          actionDetail: 'auth.login.suspicious_device',
+          actorId: account.userId,
+          metaData: {
+            email: account.email,
             previousDevice: lastDevice,
             currentDevice: deviceInfo,
-            loginAt: new Date().toISOString(),
-          },
-        })
-        .catch((err) =>
-          console.error("[Notification Error] Device change alert:", err),
-        );
+          } as any,
+        }).catch((err: any) => console.error('[AuthService] Failed to write log:', err));
+        // Thiết bị khác nhau → gửi in-app notification lẫn email song song
+        // Không await để không block response về client
+        this.notificationStrategy
+          .sendToMany(["in-app", "email"], {
+            recipientId: account.userId,
+            recipientEmail: account.email,   // ← thêm email
+            title: "Log in from a new device",
+            body: `Your account was just logged in from device: ${deviceInfo}. If it's not you, change your password immediately..`,
+            metadata: {
+              previousDevice: lastDevice,
+              currentDevice: deviceInfo,
+              loginAt: new Date().toISOString(),
+            },
+          })
+          .catch((err) =>
+            console.error("[Notification Error] Device change alert:", err),
+          );
+      }
     }
 
     return new Login(
@@ -296,6 +312,19 @@ export class AuthServiceImpl implements IAuthService {
     // Kiểm tra thiết bị mới (giống login thường)
     const lastDevice = await this.tokenService.findLastDeviceByUserId(account.userId);
     if (lastDevice && lastDevice !== deviceInfo) {
+      LogService.write({
+        message: `Suspicious Google login detected for userId: ${account.userId} — new device`,
+        actor_type: 'user',
+        type: 'auth',
+        status: 'success',
+        actionDetail: 'auth.google_login.suspicious_device',
+        actorId: account.userId,
+        metaData: {
+          email: account.email,
+          previousDevice: lastDevice,
+          currentDevice: deviceInfo,
+        } as any,
+      }).catch(err => console.error('[AuthService] Failed to write log:', err));
       this.notificationStrategy
         .sendToMany(["in-app", "email"], {
           recipientId: account.userId,

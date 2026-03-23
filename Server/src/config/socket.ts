@@ -1,28 +1,23 @@
-// config/socket.ts
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import type { Server as HttpServer } from "http";
 import jwt from "jsonwebtoken";
+import { LogService } from '../services/systemLogService.js'; // adjust path
 
-// ---------------------------------------------------- types --
 interface JwtPayload {
   id: string;
   userName: string;
   role: string;
 }
 
-// ---------------------------------------------------- class --
 export class SocketService {
   private static instance: SocketService;
   private io: SocketIOServer;
-
-  // Map userId → Set<socketId>
-  // Một user có thể mở app trên nhiều tab/thiết bị cùng lúc
   private userSockets: Map<string, Set<string>> = new Map();
 
   private constructor(httpServer: HttpServer) {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: "*", // TODO: thay bằng domain cụ thể khi production
+        origin: "*",
         methods: ["GET", "POST"],
       },
     });
@@ -32,11 +27,10 @@ export class SocketService {
     console.log("[Socket.io] Server initialized");
   }
 
-  // ─── Singleton accessor ───────────────────────────────────────────────────
   static getInstance(): SocketService {
     if (!SocketService.instance) {
       throw new Error(
-        "[SocketService] Chưa được khởi tạo. Gọi SocketService.init(httpServer) trong server.ts trước."
+        "[SocketService] Chưa được khởi tạo. Gọi SocketService.init(httpServer) trước."
       );
     }
     return SocketService.instance;
@@ -49,71 +43,87 @@ export class SocketService {
     return SocketService.instance;
   }
 
-  // ─── Middleware: xác thực JWT khi client kết nối ──────────────────────────
+  // ─── Middleware: xác thực JWT ────────────────────────────────
   private registerMiddleware(): void {
-    this.io.use((socket: Socket, next) => {
-      // Client phải gửi accessToken trong handshake auth
-      // Phía React Native: socket = io(URL, { auth: { token: accessToken } })
+    this.io.use(async (socket: Socket, next) => {
       const token = socket.handshake.auth?.token as string | undefined;
+      const ipAddress = socket.handshake.address;
 
+      // ── Không có token ──────────────────────────────────────
       if (!token) {
+        await LogService.write({
+          message: 'Socket connection attempt without token',
+          actor_type: 'system',
+          type: 'auth',
+          status: 'failure',
+          actionDetail: 'socket.auth.missing_token',
+          ipAddress,
+          metaData: { transport: socket.conn.transport.name } as any,
+        });
         return next(new Error("SOCKET_UNAUTHORIZED: Thiếu token"));
       }
 
+      // ── Verify token ────────────────────────────────────────
       try {
         const secret = process.env.ACCESS_TOKEN_SECRET!;
         const payload = jwt.verify(token, secret) as JwtPayload;
-
-        // Đính userId vào socket để dùng về sau
         (socket as any).userId = payload.id;
         next();
-      } catch {
+      } catch (error: any) {
+        // Token invalid hoặc expired
+        await LogService.write({
+          message: `Socket auth failed: ${error.message}`,
+          actor_type: 'system',
+          type: 'auth',
+          status: 'failure',
+          actionDetail: 'socket.auth.invalid_token',
+          ipAddress,
+          metaData: {
+            error: error.message,
+            // Không log raw token — chỉ log lý do
+            reason: error.name === 'TokenExpiredError' ? 'token_expired' : 'token_invalid',
+          } as any,
+        });
         next(new Error("SOCKET_UNAUTHORIZED: Token không hợp lệ hoặc đã hết hạn"));
       }
     });
   }
 
-  // ─── Events: connect / disconnect ────────────────────────────────────────
+  // ─── Events ──────────────────────────────────────────────────
   private registerEvents(): void {
     this.io.on("connection", (socket: Socket) => {
       const userId = (socket as any).userId as string;
 
-      // Thêm socketId vào map của userId
       if (!this.userSockets.has(userId)) {
         this.userSockets.set(userId, new Set());
       }
       this.userSockets.get(userId)!.add(socket.id);
 
       console.log(`[Socket.io] ✅ User connected | userId=${userId} | socketId=${socket.id}`);
+      // Không log mỗi lần connect vào DB — quá nhiều noise, chỉ log lỗi auth là đủ
 
-      // ── Client tự đánh dấu đã đọc thông báo ──
       socket.on("notification:read", (notificationId: string) => {
         console.log(`[Socket.io] notification:read | userId=${userId} | id=${notificationId}`);
-        // TODO (bước sau): gọi NotificationRepository.markAsRead(notificationId, userId)
+        // TODO: gọi NotificationRepository.markAsRead(notificationId, userId)
       });
 
-      // ── Cleanup khi disconnect ──
       socket.on("disconnect", () => {
         this.userSockets.get(userId)?.delete(socket.id);
         if (this.userSockets.get(userId)?.size === 0) {
           this.userSockets.delete(userId);
         }
         console.log(`[Socket.io] ❌ User disconnected | userId=${userId} | socketId=${socket.id}`);
+        // Không log disconnect vào DB — quá nhiều noise
       });
     });
   }
 
-  // ─── Public: emit thông báo đến một user cụ thể ──────────────────────────
-  /**
-   * Gửi một notification đến tất cả socket của userId.
-   * Nếu user không online → không làm gì (đã lưu DB rồi, user sẽ thấy khi mở app).
-   * Trả về true nếu user đang online, false nếu offline.
-   */
+  // ─── Public API ───────────────────────────────────────────────
   emitToUser(userId: string, event: string, data: unknown): boolean {
     const sockets = this.userSockets.get(userId);
 
     if (!sockets || sockets.size === 0) {
-      console.log(`[Socket.io] User ${userId} offline — bỏ qua emit`);
+      console.log(`[Socket.io] User ${userId} offline — skip emit`);
       return false;
     }
 
@@ -125,9 +135,6 @@ export class SocketService {
     return true;
   }
 
-  /**
-   * Kiểm tra user có đang online không.
-   */
   isUserOnline(userId: string): boolean {
     return (this.userSockets.get(userId)?.size ?? 0) > 0;
   }

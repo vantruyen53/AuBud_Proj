@@ -1,5 +1,6 @@
 import { User, Account, UserRefresh} from '../../entities/authEntities.js';
 import { ServerResult } from '../../entities/appEntities.js';
+import {type UserToSendNotifi} from '../../../data/repositories/auth/UserRepositoryImpl.js';
 import { type PoolConnection } from 'mysql2/promise';
 
 export interface IUserRepository {
@@ -7,6 +8,7 @@ export interface IUserRepository {
   findByEmail(email: string, password?:string): Promise<any | null>;
   findById(id: string): Promise<UserRefresh | null>;
   getEncryptedSecretKeyServerByEmail(email: string): Promise<string | null>;
+  getUserToSendNotifi():Promise<UserToSendNotifi[]>
   updateAccountStatus(id: string, status: string): Promise<void>;
   verifyAcc(email:string):Promise<boolean>;
   updatePasswordAndEncryptedSecretKeyUser(
@@ -20,4 +22,5 @@ export interface IUserRepository {
   updateLastLogin(userId:string, ):Promise<boolean>;
   updateLastInput(userId:string, conn?: PoolConnection):Promise<void>;
   getUsersWithNoInputToday(offset: number, limit: number): Promise<{ userId: string; email: string; userName: string }[]>
+  trackDailyTraffic(userId: string): Promise<void>
 }

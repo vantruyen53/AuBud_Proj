@@ -2,6 +2,7 @@ import type{ IBudgetRepository } from "../../domain/models/application/repositor
 import type { GetBudgetsDTO, CreateBudgetDTO,DeleteBudgetDTO, UpdateBudgetDTO } from "../DTO/AppDTO.js";
 import type { BudgetEntity } from "../../domain/entities/appEntities.js";
 import type { Pool } from "mysql2/promise";
+import { LogService } from "../../services/systemLogService.js";
 
 export class BudgetRepository implements IBudgetRepository {
   constructor(private pool: Pool) {}
@@ -87,7 +88,14 @@ export class BudgetRepository implements IBudgetRepository {
 
 
       return result.affectedRows > 0;
-    } catch (error) {
+    } catch (error:any) {
+       await LogService.write({
+        message: `BudgetRepository.create failed: ${error.message}`,
+        actor_type: 'system', type: 'error', status: 'failure',
+        actionDetail: 'budget_repo.create.error',
+        actorId: dto.userId,
+        metaData: { error: error.message, stack: error.stack } as any,
+      });
       console.error("Create budget at repo faile: ", error)
       return false
     }

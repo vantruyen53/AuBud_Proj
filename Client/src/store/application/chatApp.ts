@@ -26,11 +26,11 @@ export class ChatBotApp {
     this.wallets = wallets;
   }
 
-  async post(mess: IMessage, context?: string, depth: number = 0): Promise<Result> {
+  async post(mess: IMessage, context?: string, depth: number = 0, isFollowUp: boolean = false): Promise<Result> {
     if (mess.text.length > 500)
       return { status: false, message: 'Tin nhắn không được vượt quá 500 ký tự' };
 
-    const res = await this._service.post(mess.text, this.wallets, context);
+    const res = await this._service.post(mess.text, this.wallets, context, isFollowUp);
     if (!res) return { status: false, message: 'Không nhận được phản hồi' };
 
     if (res.type === 'advice' || res.type === 'reply') {
@@ -162,6 +162,7 @@ export class ChatBotApp {
       payload,
       oldWalletPayload,
       newWalletPayload,
+      'bot'
     );
 
     if (!result)
@@ -188,7 +189,7 @@ export class ChatBotApp {
       categoryId: dto.category_id,
     };
 
-    const result = await this._transactionApp.deleteTransaction(transaction as any);
+    const result = await this._transactionApp.deleteTransaction(transaction as any, 'bot');
     if (!result)
       return { status: false, message: 'Xoá giao dịch thất bại, vui lòng thử lại' };
 
@@ -225,6 +226,7 @@ export class ChatBotApp {
       Number(dto.month ?? 0),
       Number(dto.year),
       since,
+      'bot'
     );
 
     if (!data || data.rawTransactions.length === 0) {
@@ -237,16 +239,16 @@ export class ChatBotApp {
 
     // tổng hợp thành plain text summary gửi lên Gemini lần 2
     const summary = [
-      `Tổng chi: ${data.totalSending}đ`,
-      `Tổng thu: ${data.totalIncome}đ`,
-      `Số dư: ${data.balance}đ`,
-      `Chi tiết:`,
+      `Total spending: ${data.totalSending}đ`,
+      `Total income: ${data.totalIncome}đ`,
+      `Balance: ${data.balance}đ`,
+      `Data detail to respone:`,
       ...data.rawTransactions.map(t =>
         `- ID: ${t.id} | Title: ${t.title} | Amount: ${t.amount}đ | Type: ${t.type} | Date: ${t.date} | Category: ${t.category?.name ?? ''} | WalletId: ${t.walletId ?? ''}`
       ),
     ].join('\n');
 
-    return await this.post(originalMess, summary);
+    return await this.post(originalMess, summary, depth+1, true);
   }
 
   // ─── create wallet ────────────────────────────────────────────────────────
@@ -264,7 +266,7 @@ export class ChatBotApp {
       userId:this.user.id,
     };
 
-    const result = await this._walletApp.createNewWallet(payload);
+    const result = await this._walletApp.createNewWallet(payload, 'bot');
     if (!result)
       return { status: false, message: 'Tạo ví thất bại, vui lòng thử lại' };
 
@@ -292,7 +294,7 @@ export class ChatBotApp {
       actionType: 'wallet' as const,
       userId:this.user.id
     };
-    const result = await this._walletApp.updateWallet(payload);
+    const result = await this._walletApp.updateWallet(payload, 'bot');
     if (!result)
       return { status: false, message: 'Cập nhật ví thất bại, vui lòng thử lại' };
 

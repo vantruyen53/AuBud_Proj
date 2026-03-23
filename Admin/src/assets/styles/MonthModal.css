@@ -1,0 +1,108 @@
+.modal-overlay{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.modal-form{
+  background: #fff;
+  border-radius: var(--radius-lg);
+  max-width: 400px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  overflow: hidden;
+  animation: slideUp 0.2s ease-out forwards;
+  padding: 20px;
+  position: relative;
+}
+
+.modal-month__close{
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    border: none;
+    cursor: pointer;
+    background: none;
+    color: var(--color-text-light);
+}
+
+.modal-month__header{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 16px;
+}
+
+.chevron-btn{
+ background: none;
+  color: var(--color-primary);
+  font-size: 20px;
+  border: none;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.modal-month__text-year{
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.modal-month__grid{
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    /* gap: 8px; */
+}
+
+.modal-month__item{
+    width: 25%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.modal-month__item-btn{
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    color: #000;
+    border: none;
+    border-radius: 50%;
+    background: none;
+}
+
+.modal-month__item-btn:hover{
+    cursor: pointer;
+    background-color: #5bb8a815;
+}
+
+.modal-month__item--selected{
+    background-color: var(--color-primary-light);
+    color: #fff;
+}
+.modal-month__item--selected:hover{
+    background-color: var(--color-primary-light);
+}
+
+.modal-month__item--disabled{
+    color: #cbcbcb;
+}
+.modal-month__item--disabled:hover{
+    cursor: not-allowed;
+    background:none;
+}

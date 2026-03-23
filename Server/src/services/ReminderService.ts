@@ -5,6 +5,7 @@ import TokenRepositoryImpl from "../data/repositories/auth/TokenRepository.js";
 import type{ ITokenRepository } from "../domain/models/auth/ITokenRepository.js";
 import { NotificationType } from "../domain/enums/appEnum.js";
 import pool from "../config/dbConfig.js";
+import { LogService } from "./systemLogService.js";
 
 const BATCH_SIZE = 100;
 
@@ -39,27 +40,27 @@ export class ReminderService{
             const results = await Promise.allSettled(
                 users.map(async (user) => {
                 // Lấy tất cả push token còn hạn của user
-                const pushTokens = await this.tokenRepo.getPushTokensByUserId(user.userId);
+                    const pushTokens = await this.tokenRepo.getPushTokensByUserId(user.userId);
 
-                const sends: Promise<any>[] = [
-                    // In-app: lưu DB + emit socket nếu online
-                    this.notificationStrategy.sendTo("in-app", {
-                    recipientId: user.userId,
-                    type:NotificationType.REMIND,
-                    title: "Transaction entry reminder",
-                    body: `Hi ${user.userName}! You haven't recorded any transactions today. Please update your records to manage your budget more effectively.`,
-                    }),
-                    // Push: gửi đến từng thiết bị của user
-                    ...pushTokens.map((token) =>
-                    this.notificationStrategy.sendTo("push", {
+                    const sends: Promise<any>[] = [
+                        // In-app: lưu DB + emit socket nếu online
+                        this.notificationStrategy.sendTo("in-app", {
                         recipientId: user.userId,
-                        deviceToken: token,
                         type:NotificationType.REMIND,
-                        title: "Nhắc nhở nhập giao dịch",
-                        body: `Hôm nay bạn chưa ghi nhận giao dịch nào. Hãy cập nhật ngay!`,
-                    })
-                    ),
-                ];
+                        title: "Transaction entry reminder",
+                        body: `Hi ${user.userName}! You haven't recorded any transactions today. Please update your records to manage your budget more effectively.`,
+                        }),
+                        // Push: gửi đến từng thiết bị của user
+                        ...pushTokens.map((token) =>
+                        this.notificationStrategy.sendTo("push", {
+                            recipientId: user.userId,
+                            deviceToken: token,
+                            type:NotificationType.REMIND,
+                            title: "Nhắc nhở nhập giao dịch",
+                            body: `Hôm nay bạn chưa ghi nhận giao dịch nào. Hãy cập nhật ngay!`,
+                        })
+                        ),
+                    ];
 
                 await Promise.allSettled(sends);
                 })
@@ -82,5 +83,17 @@ export class ReminderService{
         console.log(
         `[Reminder] Hoàn tất — Thành công: ${totalSent} | Thất bại: ${totalFailed}`
         );
+        await LogService.write({
+            message: `Daily reminder completed — sent: ${totalSent}, failed: ${totalFailed}`,
+            actor_type: 'system',
+            type: totalFailed > 0 ? 'warning' : 'info',
+            status: totalFailed > 0 && totalSent === 0 ? 'failure' : 'success',
+            actionDetail: 'scheduler.reminder.summary',
+            metaData: {
+            totalSent,
+            totalFailed,
+            totalProcessed: totalSent + totalFailed,
+            } as any,
+        });
     }
 }

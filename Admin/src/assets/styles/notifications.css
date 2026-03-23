@@ -1,0 +1,713 @@
+/* ===========================
+   Notifications Page Styles
+   =========================== */
+
+.notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+/* Header */
+.notif-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notif-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.notif-subtitle {
+  font-size: 14px;
+  color: #8e99a8;
+  font-weight: 400;
+}
+
+/* Shared Card Base */
+.notif-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid #f0f1f4;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+  padding: 32px;
+}
+
+/* --- Composer Section --- */
+.composer-card {
+  display: flex;
+  /* flex-direction: column; */ 
+  gap: 32px;
+}
+
+.composer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.composer-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+/* Send To Options */
+.send-to-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 600px;
+}
+
+.send-to-card {
+  background: #fff;
+  border: 2px solid #e4e7ec;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.send-to-card:hover:not(.active) {
+  border-color: #cbd5e0;
+  background: #f8fafc;
+}
+
+.send-to-card.active {
+  border-color: #5bb8a8;
+  background: #f0fdfa; /* Extremely light teal */
+}
+
+.send-to-card__content {
+  display: flex;
+  gap: 12px;
+}
+
+.send-to-card__icon {
+  font-size: 24px;
+  color: #a0aec0;
+  margin-top: 2px;
+}
+
+.send-to-card.active .send-to-card__icon {
+  color: #5bb8a8;
+}
+
+.send-to-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.send-to-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.send-to-card__desc {
+  font-size: 12px;
+  color: #8e99a8;
+}
+
+.send-to-card__check {
+  color: #5bb8a8;
+  font-size: 20px;
+}
+
+/* Send Via Toggles */
+.send-via-options {
+  display: flex;
+  gap: 12px;
+}
+
+.channel-pill {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #5a6477;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.channel-pill:hover:not(.active) {
+  background: #f8fafc;
+  border-color: #cbd5e0;
+}
+
+.channel-pill.active {
+  background: #e6fffa;
+  border-color: #5bb8a8;
+  color: #2c7a7b; /* Darker teal text */
+}
+
+.channel-pill.active svg {
+  color: #319795;
+}
+
+.channel-pill svg {
+  font-size: 16px;
+  color: #a0aec0;
+}
+
+/* Compose Inputs */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compose-input, .compose-textarea {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e4e7ec;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #1a2332;
+  font-family: inherit;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.compose-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.compose-input:focus, .compose-textarea:focus {
+  background: #fff;
+  border-color: #cbd5e0;
+  box-shadow: 0 0 0 2px rgba(91, 184, 168, 0.2);
+}
+
+.compose-input::placeholder, .compose-textarea::placeholder {
+  color: #a0aec0;
+}
+
+.char-count {
+  font-size: 11px;
+  color: #a0aec0;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Schedule Toggle Box */
+.schedule-box {
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-box__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-box__icon {
+  font-size: 20px;
+  color: #4a5568;
+}
+
+.schedule-box__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-box__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.schedule-box__desc {
+  font-size: 12px;
+  color: #8e99a8;
+}
+
+/* Switch Toggle (Reused pattern) */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  display: inline-block;
+  vertical-align: middle;
+  user-select: none;
+  text-align: left;
+}
+.toggle-switch-checkbox {
+  display: none;
+}
+.toggle-switch-label {
+  display: block;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background: #cbd5e0; /* Off background */
+  transition: background-color 0.2s ease-in;
+}
+.toggle-switch-inner {
+  display: block;
+  width: 200%;
+  margin-left: -100%;
+}
+.toggle-switch-switch {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  background: #fff;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 20px;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in 0s;
+}
+.toggle-switch-checkbox:checked + .toggle-switch-label {
+  background: #5bb8a8; /* On background */
+}
+.toggle-switch-checkbox:checked + .toggle-switch-label .toggle-switch-switch {
+  right: 0px;
+}
+
+/* Composer Actions */
+.composer-actions {
+  display: flex;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.btn-send {
+  background: #5bb8a8;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-send:hover {
+  background: #4ca696;
+}
+
+.btn-send__icon {
+  transform: rotate(45deg); /* airplane point up-right */
+  font-size: 16px;
+}
+
+.btn-draft {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  color: #4a5568;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-draft:hover {
+  background: #f8fafc;
+  border-color: #cbd5e0;
+}
+
+
+/* --- History Section --- */
+.history-card {
+  padding: 24px; /* Slightly less padding than composer */
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.history-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.history-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.history-search {
+  position: relative;
+  width: 240px;
+}
+
+.history-search__icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a0aec0;
+}
+
+.history-search__input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid #e4e7ec;
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: #1a2332;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.history-search__input:focus {
+  background: #fff;
+  border-color: #cbd5e0;
+}
+
+.filter-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.filter-dropdown__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #606266;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.filter-dropdown__trigger:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+/* Menu chính */
+.filter-dropdown__menu {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  width: 200px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  list-style: none;
+  padding: 5px 0;
+  z-index: 100;
+}
+
+.filter-dropdown__item {
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  color: #303133;
+  font-size: 14px;
+  position: relative;
+}
+
+.filter-dropdown__item:hover {
+  background-color: #f5f7fa;
+  color: #409eff;
+}
+
+/* Menu con (Submenu) */
+.filter-dropdown__submenu {
+  display: none; /* Mặc định ẩn */
+  position: absolute;
+  top: 0;
+  left: 100%; /* Đẩy sang phải */
+  width: 180px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  list-style: none;
+  padding: 5px 0;
+}
+
+/* Hover vào cha thì hiện con */
+.filter-dropdown__item.has-submenu:hover > .filter-dropdown__submenu {
+  display: block;
+}
+
+.filter-dropdown__submenu li {
+  padding: 10px 15px;
+  color: #606266;
+}
+
+.filter-dropdown__submenu li:hover {
+  background-color: #ecf5ff;
+  color: #409eff;
+}
+
+/* History Table */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.history-table th, .history-table td {
+  padding: 16px 8px;
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.history-table th {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8e99a8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.history-table td {
+  font-size: 13px;
+  color: #4a5568;
+  vertical-align: middle;
+}
+
+/* Cell Specifics */
+.cell-date {
+  font-weight: 600;
+  color: #1a2332;
+  margin-bottom: 2px;
+}
+.cell-time {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.cell-recipients {
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.cell-channels {
+  display: flex;
+  gap: 6px;
+}
+
+.channel-icon-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #f0f4f8;
+  color: #718096;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.cell-title {
+  color: #4a5568;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-sent {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.status-scheduled {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.status-draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+.status-failed {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Action button */
+.btn-action-dots {
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.btn-action-dots:hover {
+  background: #f8fafc;
+  color: #4a5568;
+}
+
+/* History Pagination */
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+}
+
+.history-pagination__text {
+  font-size: 13px;
+  color: #8e99a8;
+}
+
+.history-pagination__nav {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-page {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  color: #4a5568;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-page:hover {
+  background: #f8fafc;
+}
+
+/* Modal warning send to  */
+.send-to-modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px); /* Hiệu ứng làm mờ nhẹ background */
+}
+
+/* Thân Modal */
+.send-to-modal__container {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+.send-to-modal__icon {
+  font-size: 3rem;
+  color: #f39c12; /* Màu cảnh báo cam */
+  margin-bottom: 1rem;
+}
+
+.send-to-modal__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.75rem;
+}
+
+.send-to-modal__message {
+  font-size: 0.95rem;
+  color: #7f8c8d;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+/* Khu vực nút bấm */
+.send-to-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.send-to-modal__btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.send-to-modal__btn--cancel {
+  background-color: #ecf0f1;
+  color: #7f8c8d;
+}
+
+.send-to-modal__btn--cancel:hover {
+  background-color: #bdc3c7;
+}
+
+.send-to-modal__btn--navigate {
+  background-color: #5bb8a8; /* Màu xanh nước biển đồng bộ với IT/Admin */
+  color: white;
+}
+
+.send-to-modal__btn--navigate:hover {
+  background-color: #408f82;
+  transform: translateY(-1px);
+}
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+
+
+
+@media (max-width:1240px){
+  .composer-card{
+    flex-direction: column !important;
+  }
+}

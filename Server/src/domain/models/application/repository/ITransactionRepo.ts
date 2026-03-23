@@ -5,7 +5,7 @@ import type{ CreateTransactionDTO, UpdateTransactionDTO, TransactionQueryDTO } f
 export interface ITransactionRepository {
   create(userId: string, data: CreateTransactionDTO,newEncryptedBalance: string): Promise<ServerResult>;
   update(userId: string, data: UpdateTransactionDTO): Promise<ServerResult>;
-  delete(userId: string, id: string, newBackupBalance:string): Promise<ServerResult>;
+  delete(userId: string, id: string, newBackupBalance:string, handleBy:'bot'|'user'): Promise<ServerResult>;
   
   // Hàm tìm kiếm linh hoạt dựa trên query params
   find(userId: string, query: TransactionQueryDTO): Promise<ITransaction[]>;

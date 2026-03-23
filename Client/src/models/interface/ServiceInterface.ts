@@ -6,18 +6,18 @@ import { ITransactionItem , IWallet, IDebt, IDebtHistory, IGroupFund,
 export interface ITransactionService {
   addTransaction(transaction: EncryptedDTO, newWatlletBalance: string): Promise<boolean>;
   updateTransaction(transaction: EncryptedDTO, oldWallet:EncryptedDTO, newWallet:EncryptedDTO): Promise<boolean>;
-  deleteTransaction(transactionId: string, newBackupBalance:string): Promise<boolean>;
-  getByDayService(day: number, month: number, year: number): Promise<ITransactionItem[] | null>;
-  getByMonthService(month: number, year: number): Promise<ITransactionItem[] | null>;
-  getByYearService(year: number): Promise<ITransactionItem[] | null>;
+  deleteTransaction(transactionId: string, newBackupBalance:string,handleBy:'bot'|'user'): Promise<boolean>;
+  getByDayService(day: number, month: number, year: number, handleBy:'bot'|'user'): Promise<ITransactionItem[] | null>;
+  getByMonthService(month: number, year: number, handleBy:'bot'|'user'): Promise<ITransactionItem[] | null>;
+  getByYearService(year: number, handleBy:'bot'|'user'): Promise<ITransactionItem[] | null>;
   getByCategoryService(categoryId: string): Promise<ITransactionItem[] | null>;
   getMonthlySummary(day:number, month:number, year:number):
     Promise<{ currentPeriod: IMonthlySummary[]; lastPeriod: IMonthlySummary[]}>
 }
 
 export interface IWalleetService {
-  addWallet(wallet: EncryptedDTO, encryptedNewBalance?:string): Promise<boolean>;
-  updateWallet(wallet: EncryptedDTO): Promise<boolean>;
+  addWallet(wallet: EncryptedDTO, handleBy:'bot'|'user', encryptedNewBalance?:string, ): Promise<boolean>;
+  updateWallet(wallet: EncryptedDTO, handleBy:'bot'|'user'): Promise<boolean>;
   deleteWallet(walletId: string, actionType: 'wallet' | 'saving' | 'debt'): Promise<boolean>;
   getAllWallets(): Promise<{
     wallets: IWallet[],

@@ -25,6 +25,7 @@ export interface TransactionQueryDTO {
   month?: string;
   year?: string;
   categoryId?: string;
+  handleBy:'bot'|'user'
 }
 
 //==========================WALLET=================

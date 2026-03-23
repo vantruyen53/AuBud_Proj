@@ -3,11 +3,13 @@ import express from "express";
 import dotenv from "dotenv";
 import passport from 'passport';
 import http from "http";
+import cookieParser from "cookie-parser";
 
 import pool from "./src/config/dbConfig.js";
 import { connectRedis } from "./src/config/redis.js";
 import { generateKeyPair } from "./src/utils/helpers/RSA.js";
-import router from "./src/routes/routesApp.js";
+import routerApp from "./src/routes/routesApp.js";
+import routesWeb from "./src/routes/routesWeb.js";
 import { initMarketScheduler } from "./src/config/scheduler.js";
 import { MarketService } from "./src/services/applicationService/WebDataScrapService.js";
 import { SocketService } from "./src/config/socket.js"; //
@@ -37,10 +39,19 @@ if (!process.env.RSA_PRIVATE_KEY || !process.env.RSA_PUBLIC_KEY){
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",        // web admin dev
+    "https://your-admin.vercel.app" // web admin production (sau này)
+  ],
+  credentials: true
+}));
 app.use(apiLimiter)
-app.use(router);
+app.use(routerApp);
+app.use(routesWeb);
 app.use(passport.initialize());
+
 
 // ── Tạo httpServer từ express app ────────────────────────────────────────────
 // ⚠️ Phải dùng http.createServer thay vì app.listen

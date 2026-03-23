@@ -131,6 +131,8 @@ export class InAppNotificationChannel implements INotificationChannel {
         metadata: payload.metadata ?? null,
       });
 
+      console.log('[IN-APP] Save result: ', saved)
+
       // 2️⃣ Nếu user đang online → emit socket realtime
       const socketService = SocketService.getInstance();
         const isOnline = socketService.emitToUser(
