@@ -48,8 +48,13 @@ export class WalletController {
             const userId = req.user.id;
             const { actionType } = req.params;
             const {walletHash,handleBy, encryptedNewBalance} = req.body;
+                console.log('=========================CONTROLLER=============')
+                console.log('actionType:', actionType)
+                console.log('walletHash: ', walletHash)
+                console.log('userId: ', userId)
+                console.log('encryptedNewBalance: ', encryptedNewBalance)
             if(encryptedNewBalance){
-                const result = await this.service.create(actionType as ActionTarget, walletHash, userId, encryptedNewBalance);
+                const result = await this.service.create(actionType as ActionTarget,handleBy, walletHash, userId, encryptedNewBalance);
                 return res.status(200).json({ status: result });
             }
             const result = await this.service.create(actionType as ActionTarget, handleBy, walletHash, userId);

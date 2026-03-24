@@ -36,7 +36,11 @@ export class DebtRepository implements IDebtRepository {
         return rows[0] as DebtEntity;
     }
 
-    async create(dto: CreateDebtDTO, userId:string, encryptedNewBalance:string): Promise<boolean> {
+    async create(dto: CreateDebtDTO,handleBy:'bot'|'user', userId:string, encryptedNewBalance:string): Promise<boolean> {
+        // console.log('target:', target)
+        // console.log('dto: ', dto)
+        // console.log('userId: ', userId)
+        // console.log('encryptedNewBalance: ', encryptedNewBalance)
         const conn = await this.pool.getConnection();
         try{
             const sql = `
@@ -47,7 +51,7 @@ export class DebtRepository implements IDebtRepository {
             const id = crypto.randomUUID();
             const [result] = await conn.execute(sql, [
                 id, userId, dto.name, dto.type,
-                dto.partnerName, dto.totalAmount,dto.totalAmount, dto.status
+                dto.partnerName, dto.totalAmount,dto.remaining as string, dto.status
             ]);
 
             const updateWalletBalance=`UPDATE wallet SET balance = ?  WHERE id = ? AND user_id = ?`

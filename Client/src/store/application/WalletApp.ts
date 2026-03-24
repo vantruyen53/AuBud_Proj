@@ -135,7 +135,7 @@ export class WalletApp{
     return await this.walletService.updateWallet(encryptedPayload, handleBy)
   }
 
-  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, handleBy:'bot'|'user'="user", newPaymentWalletBalance?:number) {
+  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, newPaymentWalletBalance?:number, handleBy:'bot'|'user'="user") {
     if (!wallet) return false;
 
     console.log(wallet)
@@ -147,7 +147,8 @@ export class WalletApp{
       if(newPaymentWalletBalance){  
         const toStr = newPaymentWalletBalance?.toString() as string
         const encryptedNewBalance = await encryptData(toStr, secretKey)
-        
+        console.log('newPaymentWalletBalance: ',newPaymentWalletBalance)
+        console.log('encryptedPayload: ',encryptedPayload)
         return await this.walletService.addWallet(encryptedPayload,handleBy, encryptedNewBalance)
       }
       

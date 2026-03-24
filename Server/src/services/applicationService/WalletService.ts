@@ -27,8 +27,11 @@ export class WalletService implements IWalletService {
     }
 
     async create(target: ActionTarget,handleBy:'bot'|'user', dto: any, userId:string, encryptedNewBalance?:string): Promise<boolean> {
-        console.log(target)
-        console.log(dto)
+        console.log('=========================SERVICE=============')
+        console.log('target:', target)
+        console.log('dto: ', dto)
+        console.log('userId: ', userId)
+        console.log('encryptedNewBalance: ', encryptedNewBalance)
         if(encryptedNewBalance)
             return await this.factory.getRepo(target).create(dto,handleBy,userId, encryptedNewBalance);
         else

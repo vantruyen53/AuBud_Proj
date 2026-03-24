@@ -5,17 +5,16 @@ export const usageStatsRepository = {
   // gọi từ chat.service — mỗi khi user gửi prompt
   async incrementPrompt(): Promise<void> {
     await pool.query(`
-      INSERT INTO usage_stats (date, total_prompt, total_manual)
-      VALUES (CURDATE(), 1, 0)
+      INSERT INTO usage_stats (id, date, total_prompt, total_manual)
+      VALUES (UUID(), CURDATE(), 1, 0)
       ON DUPLICATE KEY UPDATE total_prompt = total_prompt + 1
     `);
   },
 
-  // gọi từ các service có sẵn — mỗi khi user thao tác thủ công
   async incrementManual(): Promise<void> {
     await pool.query(`
-      INSERT INTO usage_stats (date, total_prompt, total_manual)
-      VALUES (CURDATE(), 0, 1)
+      INSERT INTO usage_stats (id, date, total_prompt, total_manual)
+      VALUES (UUID(), CURDATE(), 0, 1)
       ON DUPLICATE KEY UPDATE total_manual = total_manual + 1
     `);
   },

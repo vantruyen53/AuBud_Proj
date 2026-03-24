@@ -25,7 +25,8 @@ export const chatService = async ({ userId, message, context, wallets, isFollowU
     const categories = await categoryRepo.getAllCategory(userId);
 
     if (!isFollowUp) {
-      usageStatsRepository.incrementPrompt().catch(() => {});
+      console.log("==========increat promt | chatService========")
+      usageStatsRepository.incrementPrompt().catch((err) => console.error(err));
     }
 
     const systemPrompt = buildSystemPrompt({

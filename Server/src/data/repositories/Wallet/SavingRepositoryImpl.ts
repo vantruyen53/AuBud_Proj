@@ -33,12 +33,15 @@ export class SavingRepository implements ISavingRepository {
             return rows[0] as SavingEntity;
     }
 
-    async create(dto: CreateSavingDTO, userId:string): Promise<boolean> {
+    async create(dto: CreateSavingDTO,handleBy:'bot'|'user', userId:string): Promise<boolean> {
         const sql = `
             INSERT INTO savings_book (id, user_id, name, balance, target, create_at, last_access, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const id = crypto.randomUUID();
+        console.log('dto: ', dto)
+        console.log('userId: ', userId)
+        console.log('id: ', id)
         const [result] = await this.pool.execute(sql, [
             id, userId, dto.name, dto.balance, dto.target,
             dto.createdAt, dto.createdAt, dto.status

@@ -66,6 +66,10 @@ export class WalletService implements IWalleetService {
 
     async addWallet(walletHash: EncryptedDTO, handleBy:'bot'|'user', encryptedNewBalance?:string): Promise<boolean> {
         if (!walletHash) return false;
+        console.log('===============================================SERVICE: ')
+        console.log('walletHash: ', walletHash)
+        console.log('handleBy: ', handleBy)
+        console.log('encryptedNewBalance: ', encryptedNewBalance)
         if(encryptedNewBalance){
             const res = await this._multiRequest("POST", {walletHash, encryptedNewBalance, handleBy}, walletHash.actionType);
             return res.status;
@@ -73,6 +77,7 @@ export class WalletService implements IWalleetService {
 
         const res = await this._multiRequest("POST", {walletHash}, walletHash.actionType);
         return res.status;
+        // return true;
     }
     async updateWallet(walletHash: EncryptedDTO, handleBy:'bot'|'user'): Promise<boolean> {
         if (!walletHash) return false;

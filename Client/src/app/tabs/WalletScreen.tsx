@@ -95,7 +95,6 @@ export default function WalletScreen() {
 
   const handleSave= async()=>{
     const payLoad = extractWallet(modalType, formData, id, walletForCreateDebt.id)
-    console.log('========', modalType)
     if(payLoad)
      try {
         if (typeAction === 'add') {
@@ -124,6 +123,7 @@ export default function WalletScreen() {
           if(reslut)
             triggerRefresh() 
         }
+        setWalletForCreateDebt({id:'', balance:0, name:''})
         await refreshWallet(id, accessToken);
         setModalVisible(false)
       } catch (err) {
@@ -481,7 +481,7 @@ export default function WalletScreen() {
           isVisible={isModalVisible}
           type={modalType}
           typeAction={typeAction}
-          onPressClose={()=>setModalVisible(false)}
+          onPressClose={()=>{setModalVisible(false); setWalletForCreateDebt({id:'', balance:0, name:''})}}
           formData={formData}
           setFormData={setFormData}
           onPressDelete={handleDelete}
