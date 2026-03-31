@@ -10,13 +10,12 @@
   -  Ứng dụng quản lí ngân sách cá nhân có tích hợp chat box AI để thực hiện 1 số các tác vụ cơ bản. 
 
 ## 1.2 Công nghệ: 
-  - FE: react native
-  - BE: Nodejs
+  - FE: react native, reactjs
+  - BE: Nodejs express
   - Language: typescrip
   - SQL: Mysql
 
 ## 1.3 Cấu trúc dự án chia làm 4 phần chính:
-  - Docs/ -> Chứa các tài liệu hướng dẫn và giới thiệu về dự án
   - Client/ -> Cấu trúc code giao diện ứng dụng người dùng
   - Server/ -> Logic backend sử lý yêu cầu người dùng và kết nối db
   - Admin/ -> Cấu trúc cdoe giao diện admin dashboard của người quản lí hệ thống thống
@@ -39,40 +38,39 @@
   - Hệ thống được tích hợp cơ chế ghi log  để theo dõi và lưu lại các hoạt động quan trọng của người dùng như đăng nhập, đăng nhập thất bại, khôi phục mật khẩu .
   - Hiển thị lưu lượng truy cập trong ngày, những ngày trong tháng, hàng tháng, 
   - Quản lí tài khoản người dùng.
+  - Xem đánh giá người dùng
+  - Gởi thông báo cho người dùng thông qua email, in-app push.
 
 ## 1.5 Cấu trúc dự án:
-**Root Path:** `d:\10.Dev\1.Projects\AuBud_App`
 ```
 ├── 📁 .github
 │   └── 📁 appmod
 │       └── 📁 appcat
 ├── 📁 Admin
 │   ├── 📁 public
-│   │   └── 🖼️ vite.svg
 │   ├── 📁 src
 │   │   ├── 📁 Context
+│   │   ├── 📁 application
 │   │   ├── 📁 assets
+│   │   │   ├── 📁 image
+│   │   │   ├── 📁 styles
 │   │   │   └── 🖼️ react.svg
 │   │   ├── 📁 components
-│   │   │   ├── 📁 common
-│   │   │   └── 📁 transaction
 │   │   ├── 📁 constants
 │   │   ├── 📁 hooks
 │   │   ├── 📁 model
+│   │   │   ├── 📁 DTO
+│   │   │   └── 📁 type
 │   │   ├── 📁 pages
 │   │   │   ├── 📁 auth
-│   │   │   ├── 📁 budget
-│   │   │   ├── 📁 dashboard
-│   │   │   ├── 📁 group
-│   │   │   ├── 📁 transaction
-│   │   │   └── 📁 wallet
 │   │   ├── 📁 router
 │   │   ├── 📁 services
-│   │   │   ├── 📁 api
-│   │   │   └── 📁 store
-│   │   ├── 📁 styles
-│   │   │   ├── 🎨 App.css
-│   │   │   └── 🎨 index.css
+│   │   │   ├── 📁 auth
+│   │   │   ├── 📁 mock
+│   │   │   └── 📁 serviceImplement
+│   │   ├── 📁 utils
+│   │   │   ├── 📁 configs
+│   │   │   └── 📁 helpers
 │   │   ├── 📄 App.tsx
 │   │   └── 📄 main.tsx
 │   ├── ⚙️ .gitignore
@@ -85,7 +83,6 @@
 │   ├── ⚙️ tsconfig.json
 │   ├── ⚙️ tsconfig.node.json
 │   └── 📄 vite.config.ts
-|  
 ├── 📁 Client
 │   ├── 📁 .expo
 │   │   ├── 📝 README.md
@@ -93,86 +90,27 @@
 │   ├── 📁 src
 │   │   ├── 📁 app
 │   │   │   ├── 📁 auth
-│   │   │   │   ├── 📄 forgotPassworsScreen.tsx
-│   │   │   │   ├── 📄 login.tsx
-│   │   │   │   ├── 📄 resetPasswordScreen.tsx
-│   │   │   │   ├── 📄 signUpPage.tsx
-│   │   │   │   └── 📄 verifyOTPScreen.tsx
 │   │   │   ├── 📁 tabs
 │   │   │   │   ├── 📁 detailStack
-│   │   │   │   │   ├── 📄 HistoryScreen.tsx
-│   │   │   │   │   ├── 📄 addTransaction.tsx
-│   │   │   │   │   ├── 📄 allCategory.tsx
-│   │   │   │   │   └── 📄 groupScreen.tsx
-│   │   │   │   ├── 📄 AnalysisScreen.tsx
-│   │   │   │   ├── 📄 BudgetScreen.tsx
-│   │   │   │   ├── 📄 HomeScreen.tsx
-│   │   │   │   ├── 📄 MoreScreen.tsx
-│   │   │   │   ├── 📄 WalletScreen.tsx
-│   │   │   │   └── 📄 chatAI.tsx
 │   │   │   └── 📄 CustomSplashScreen.tsx
 │   │   ├── 📁 assets
 │   │   │   ├── 📁 images
-│   │   │   │   ├── 🖼️ _ seriousLogo.png
-│   │   │   │   ├── 🖼️ _happyLogo.png
-│   │   │   │   ├── 🖼️ _logo.png
-│   │   │   │   ├── 🖼️ _sabLogo.png
-│   │   │   │   └── 🖼️ welcome.png
 │   │   │   └── 📁 styles
-│   │   │       ├── 📄 addTransactionStyle.ts
-│   │   │       ├── 📄 analysisStyle.ts
-│   │   │       ├── 📄 authStyle.tsx
-│   │   │       ├── 📄 calenderStyle.ts
-│   │   │       ├── 📄 historyStyle.ts
-│   │   │       ├── 📄 homeStyle.tsx
-│   │   │       ├── 📄 modalStyle.tsx
-│   │   │       ├── 📄 monthGridStyle.ts
-│   │   │       ├── 📄 splashStyle.tsx
-│   │   │       ├── 📄 typeDebts.ts
-│   │   │       ├── 📄 walletStyle.ts
-│   │   │       └── 📄 yearListStyle.ts
 │   │   ├── 📁 components
-│   │   │   ├── 📄 barChartTransaction.tsx
-│   │   │   ├── 📄 calendar.tsx
-│   │   │   ├── 📄 customModal.tsx
-│   │   │   ├── 📄 floatAddBtn.tsx
-│   │   │   ├── 📄 horizontalBarChart.tsx
-│   │   │   ├── 📄 monthGrid.tsx
-│   │   │   ├── 📄 pieChart.tsx
-│   │   │   ├── 📄 transaction.tsx
-│   │   │   ├── 📄 typeDebts.tsx
-│   │   │   └── 📄 yearList.tsx
 │   │   ├── 📁 constants
-│   │   │   └── 📄 theme.ts
 │   │   ├── 📁 hooks
-│   │   │   └── 📄 useProvider.tsx
 │   │   ├── 📁 models
+│   │   │   ├── 📁 interface
 │   │   │   ├── 📁 types
-│   │   │   │   ├── 📄 RootStackParamList.ts
-│   │   │   │   └── 📄 appContext.ts
 │   │   │   └── 📄 IApp.ts
 │   │   ├── 📁 navigation
-│   │   │   ├── 📄 _layout.tsx
-│   │   │   ├── 📄 _layoutAuth.tsx
-│   │   │   ├── 📄 _layoutDetailStack.tsx
-│   │   │   └── 📄 _layoutTabs.tsx
 │   │   ├── 📁 services
+│   │   │   ├── 📁 ServiceImplement
+│   │   │   ├── 📁 auth
 │   │   ├── 📁 store
-│   │   │   ├── 📁 context
-│   │   │   ├── 📁 local
+│   │   │   ├── 📁 application
 │   │   │   └── 📁 seed
-│   │   │       ├── 📄 budget.ts
-│   │   │       ├── 📄 category.ts
-│   │   │       ├── 📄 debt.ts
-│   │   │       ├── 📄 groupFunds.ts
-│   │   │       ├── 📄 saving.ts
-│   │   │       ├── 📄 statistics.ts
-│   │   │       ├── 📄 transaction.ts
-│   │   │       └── 📄 wallets.ts
 │   │   └── 📁 utils
-│   │       ├── 📄 format.ts
-│   │       ├── 📄 generateSectionList .ts
-│   │       └── 📄 helper.ts
 │   ├── ⚙️ .gitignore
 │   ├── 📄 App.tsx
 │   ├── ⚙️ app.json
@@ -180,49 +118,52 @@
 │   ├── ⚙️ package-lock.json
 │   ├── ⚙️ package.json
 │   └── ⚙️ tsconfig.json
-|
-├── 📁 Docs 
-│   ├── 📝 README.md
-│   ├── 📝 abstract_interface_concrete_guide.md
-│   ├── 📄 class_diagram.puml
-│   ├── 📝 class_diagram_design.md
-│   ├── 📝 sequence_diagrams.md
-│   └── 📝 tutorial.md
-|
-└── 📁 Server   
+└── 📁 Server
+    ├── 📁 .expo
+    │   ├── 📝 README.md
+    │   └── ⚙️ settings.json
     ├── 📁 src
+    │   ├── 📁 chat
     │   ├── 📁 config
+    │   ├── 📁 controllers
+    │   │   ├── 📁 admin
+    │   │   └── 📁 user
     │   ├── 📁 data
-    │   │   ├── 📁 datasources
-    │   │   │   ├── 📁 local
-    │   │   │   └── 📁 remote
-    │   │   ├── 📁 models
+    │   │   ├── 📁 DTO
+    │   │   ├── 📁 local
     │   │   └── 📁 repositories
+    │   │       ├── 📁 Wallet
+    │   │       ├── 📁 admin
+    │   │       ├── 📁 auth
     │   ├── 📁 domain
     │   │   ├── 📁 abstracts
     │   │   ├── 📁 entities
     │   │   ├── 📁 enums
-    │   │   └── 📁 interfaces
+    │   │   └── 📁 models
+    │   │       ├── 📁 application
+    │   │       │   ├── 📁 interface
+    │   │       │   └── 📁 repository
+    │   │       └── 📁 auth
     │   ├── 📁 middlewares
     │   ├── 📁 routes
     │   ├── 📁 services
+    │   │   ├── 📁 adminService
+    │   │   ├── 📁 applicationService
+    │   │   ├── 📁 chatService
     │   └── 📁 utils
     │       ├── 📁 factories
     │       ├── 📁 helpers
     │       └── 📁 strategies
-    │           ├── 📁 export
-    │           └── 📁 report
     ├── ⚙️ .gitignore
     ├── ⚙️ package-lock.json
     ├── ⚙️ package.json
     ├── 📄 server.ts
     └── ⚙️ tsconfig.json
----
 ```
 
 ## 1.6 Run project
   ### Dowload project:
-    ```git clone https://github.com/vantruyen53/AuBud_Proj.git```
+    ```git clone https://github.com/truyennv123/AuBud_Proj.git```
   ### Run mobile app
     - Dowload "Expo Go" app on CHplay or AppStore
     - Navigate to Client folder
@@ -304,21 +245,21 @@
         - In ./Server/.env, update DB_PORT from 3307 to 3306
       
       ##Final
-        - Open terminal, run 
-        ```npm run dev```
-
+        - Open 2 bash terminal, run 
+        ```npm run dev and ngrok http 8080 ```
   ### Run Admin dashboard web
-   - Back to root folder
+    - Back to root folder
     ``` cd ..```
     - Navigate to Admin folder
-    ``` cd Server ```
+    ``` cd Admin ```
     - Dowload dependences:
     ```npm i```
     - Run
     ```npm run dev```
+
   
 
 
 **Tác giả:** Van Truyen
-**Ngày tạo:** 02/024/2026  
+**Ngày tạo:** 02/02/2026  
 **Version:** 1.0

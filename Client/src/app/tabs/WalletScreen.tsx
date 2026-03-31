@@ -108,12 +108,11 @@ export default function WalletScreen() {
             else
               newPaymentWalletBalance = walletForCreateDebt.balance-p.totalAmount;
 
-            const result = await walletApp.createNewWallet(payLoad, newPaymentWalletBalance)
+            const result = await walletApp.createNewWallet(payLoad,'user', newPaymentWalletBalance)
             if(result)
               triggerRefresh()
           }else{
-            const reslut =await walletApp.createNewWallet(payLoad)
-            
+            const reslut =await walletApp.createNewWallet(payLoad, 'user')
             console.log('=======',reslut)
             if(reslut)
               triggerRefresh()
@@ -210,7 +209,6 @@ export default function WalletScreen() {
     // console.log('old balance: ', wallet[0].balance)
     // console.log('newBalance: ', wBalance)
   }
-  // console.log('=================================== ', walletForCreateDebt)
   return (
     <GestureHandlerRootView style={{flex:1}}>
       <View style={styles.container}>

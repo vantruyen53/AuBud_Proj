@@ -265,7 +265,7 @@ export default class UserRepositoris implements IUserRepository {
         INNER JOIN account a ON a.user_id = u.id
         WHERE 
           a.role = 'user'
-          a.status != 'ban'
+          AND a.status != 'ban'
           AND a.verified = 1
           AND (
             u.last_input IS NULL

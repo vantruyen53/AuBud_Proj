@@ -44,7 +44,7 @@ export function validateWalletBody(req: Request, res: Response, next: NextFuncti
   const requiredFields: Record<string, string[]> = {
     wallet: ['name', 'balance', 'createdAt'],
     saving: ['name', 'target', 'createdAt'],
-    debt:   ['name', 'type', 'partnerName', 'totalAmount', 'createdAt', 'paymentWalletId'],
+    debt:   ['name', 'type', 'partnerName', 'totalAmount', 'createdAt'],
   };
 
   const missing = requiredFields[actionType as ActionTarget]?.filter(f => !walletHash[f]) ?? [];

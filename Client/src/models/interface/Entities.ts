@@ -1,3 +1,5 @@
+import { CategoryDTO } from "./DTO";
+
  export interface IDateState {
   y: string;
   m: string;
@@ -116,8 +118,14 @@ export interface Budgets{
   id: string,
   category:ICategory,
   target: number;      
-  balance: number;          
+  balance: number ;          
   createdAt: string;
+}
+
+export interface DataForAI{
+  buget:BudgetEntitiy[], 
+  category: CategoryDTO[], 
+  transaction: ITransactionItem[]
 }
 
 

@@ -4,6 +4,7 @@ import mockBudget from '@/src/store/seed/budget';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { MaterialIcons } from "@react-native-vector-icons/material-icons";
+import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 
 import {HomeStackNavProp} from '@/src/models/types/RootStackParamList'
 import { Colors, Fonts } from "@/src/constants/theme";
@@ -15,21 +16,36 @@ import { BudgetApp } from "@/src/store/application/BudgetApp";
 import { useProvider } from "@/src/hooks/useProvider";
 import { Budgets } from "@/src/models/interface/Entities";
 import LoadingLogo from "@/src/components/loadingOverlay";
+import AutoBudgetModal from "@/src/components/AutoBudgetModal";
 
+interface BudgetProposal{
+  categoryId: string;
+    categoryName: string;
+    iconName: string;
+    iconColor: string;
+    categoryType:string;
+    target: string;
+    date: string;
+}
 export default function BudgetScreen() {
   const navigation = useNavigation<HomeStackNavProp>();
   const month = new Date().getMonth()+1;
   const year = new Date().getFullYear();
-  const {id, accessToken}=useProvider()
+  const {id, accessToken, walletScreen}=useProvider()
   const budgetApp = useMemo(()=>
     new BudgetApp({id, accessToken}),[id, accessToken]
   )
 
 
   const [budgets, setBudget]=useState<Budgets[]>([])
+  const [aiBudgets, setAiBudgets] = useState<BudgetProposal[]>([])
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [isOpenAutoBudget, setIsOpenAutoBudget] = useState(false)
   const [modalType, setModalType]=useState<'add'|'edit'>('add')
+  const [modalStatus, setModalStatus] = useState<'idle' | 'loading' | 'generating'>('idle');
+
   const [formData, setFormData] = useState<any>({})
 
   const [trigger, setTrigger]=useState(0)
@@ -54,21 +70,32 @@ export default function BudgetScreen() {
   ).getDate();
   const dateRange = `(01/${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${daysInMonth}/${String(currentMonth.getMonth() + 1).padStart(2, "0")})`;
 
-  const loadData = async ()=>{
+  const loadData = async (isReturn: boolean = false)=>{
     const budgets = await budgetApp.getBudgets((currentMonth.getMonth()+1).toString(), currentMonth.getFullYear().toString());
-    if(budgets){
-      setBudget(budgets)
+    if(isReturn){
+      if(budgets) {
+        setBudget(budgets)
+        return budgets
+      };
+      return [];
     }
+
   }
 
   useFocusEffect(
     useCallback( ()=>{
       const fetchData =async()=>{
        setIsLoading(true)
-        await loadData();
+
+        const freshBudgets = await loadData(true);
+
+        const isOpenAutoBudget = (currentMonth.getMonth() + 1 ===month && currentMonth.getFullYear() === year) 
+          && freshBudgets?.length === 0 && aiBudgets.length === 0;
+        setIsOpenAutoBudget(isOpenAutoBudget);
+
        setIsLoading(false)
      }
-     fetchData()
+     fetchData();
     }, [currentMonth, trigger])
   )
 
@@ -141,6 +168,53 @@ export default function BudgetScreen() {
     ]);
   };
 
+  const handleGenerateAutoBudget = async () => {
+    try {
+      setModalStatus('loading');
+      const proposal = await budgetApp.generateAutoBudget(month, year,walletScreen.rawData.wallets,
+        (status: "idle" | "loading" | "generating")=>setModalStatus(status));
+
+      console.log('[PAGE] Auto budget proposal:', proposal);
+
+      if(proposal.budgets.length === 0 && (proposal.message !=="" && proposal.message !== undefined)) {
+        showError(proposal.message || "Failed to generate auto budget. Please try again.");
+        setModalStatus('idle');
+        setIsOpenAutoBudget(false);
+        return;
+      }
+
+      setAiBudgets(proposal.budgets);
+      setModalStatus('idle');
+      setIsOpenAutoBudget(false);
+    } catch (error:any) {
+        showError(error.message || "Failed to generate auto budget. Please try again.");
+        setModalStatus('idle');
+        setIsOpenAutoBudget(false);
+    }
+  };
+
+  const handleClearAiBudgets = async()=>{
+    setAiBudgets([]);
+    setModalStatus('idle');
+  }
+
+  const handleSaveAllAiBudgets = async()=>{
+    const payLoads: BudgetDTO[] = aiBudgets.map(b => ({
+      categoryId: b.categoryId,
+      target: b.target,
+      date: monthYear,
+      status: 'active'
+    }));
+
+    const { success, message } = await budgetApp.createMultipleBudgets(payLoads);
+    if (success) {      
+      setAiBudgets([]);
+      setTrigger(pre => pre + 1);
+    } else {
+      showError(message);
+    }
+  }
+
   if(isLoading)
     return <LoadingLogo logoSource={require('../../assets/images/welcome.png')}/>
   else
@@ -194,8 +268,74 @@ export default function BudgetScreen() {
             </View>
 
             {/* --- BUDGET CATEGORIES LIST --- */}
+            {aiBudgets.length > 0 && (
+              <>
+                {/* Header thông báo đây là gợi ý từ AI */}
+                <View style={styles.aiHeaderInfo}>
+                  <MaterialIcons name="smart-toy" size={20} color="#12D0FF" />
+                  <Text style={styles.aiHeaderText}>AI Budget Suggestions</Text>
+                </View>
 
-            {budgets.length<=0?<Text style={styles.noTransactionsText}>No budget in {monthYear}</Text>:
+                {aiBudgets.map((item, index) => {
+                  const remaining = parseFloat(item.target) - 0;
+                  const percentage = 0; // Luôn là 0% cho gợi ý mới
+
+                  return (
+                    <TouchableOpacity 
+                      key={item.categoryId} 
+                      // Áp dụng thêm style aiBudgetCard để làm nhạt màu
+                      style={[styles.budgetCard, styles.aiBudgetCard]} 
+                      onPress={() => {
+                        setFormData({ ...formData, budgetId: item.categoryId, target: item.target, categoryName: item.categoryName })
+                        setModalType('edit')
+                        setIsModalVisible(true)
+                      }}
+                      onLongPress={() => handleDelete(item.categoryId)}
+                    >
+                      {/* Nội dung bên trong giữ nguyên nhưng sẽ tự động nhạt đi nhờ opacity của card cha */}
+                      <View style={styles.budgetCardHeader}>
+                        <View style={[styles.categoryIconWrapper, { backgroundColor: `rgba(${item.iconColor},0.1)` }]}>
+                          <MaterialIcons name={item.iconName as any} size={20} color={`rgb(${item.iconColor})`} />
+                        </View>
+                        <Text style={styles.categoryName}>{item.categoryName}</Text>
+                        <View style={styles.budgetCardRight}>
+                          <Text style={styles.remainingLabel}>Remain</Text>
+                          <Text style={styles.remainingAmount}>
+                            {formatCurrency(remaining, { absolute: true })}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBar, { width: `0%`, backgroundColor: '#E5E7EB' }]} />
+                      </View>
+
+                      <View style={styles.budgetCardFooter}>
+                        <Text style={styles.budgetLabel}>Target: {formatCurrency(parseInt(item.target))}</Text>
+                        <View style={[styles.aiBadge]}>
+                          <MaterialIcons name="auto-awesome" size={15} color="#fff" />
+                          <Text style={{ marginLeft: 4, color: '#fff', }}>AI Suggestion</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* Cụm nút điều khiển bên dưới danh sách AI */}
+                <View style={styles.aiActionContainer}>
+                  <TouchableOpacity style={styles.clearButton} onPress={handleClearAiBudgets}>
+                    <Text style={styles.clearButtonText}>Clear All</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.saveAllButton} onPress={handleSaveAllAiBudgets}>
+                    <MaterialDesignIcons name="creation" size={18} color="#FFF" />
+                    <Text style={styles.saveAllButtonText}>Save All</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {budgets.length<=0?aiBudgets.length<=0 ? <Text style={styles.noTransactionsText}>No budget in {monthYear}</Text> : '' : 
             budgets.map((item)=>{
               const remaining = item.target - item.balance;
               const percentage =
@@ -254,7 +394,7 @@ export default function BudgetScreen() {
             })}
 
             {/* --- ADD BUDGET BUTTON --- */}
-            {canAdd && (
+            {(canAdd && aiBudgets.length <= 0) && (
               <TouchableOpacity
                 style={styles.addBudgetBtn}
                 onPress={() => {
@@ -295,6 +435,13 @@ export default function BudgetScreen() {
             />
           
         </SafeAreaView>
+
+        <AutoBudgetModal
+          isVisible={isOpenAutoBudget}
+          onClose={() => {setIsOpenAutoBudget(false); setModalStatus('idle');}}
+          status={modalStatus}
+          onConfirm={handleGenerateAutoBudget}
+        />
       </View>
     )
 }
@@ -502,4 +649,80 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.light.primary, // Chữ xanh
   } as TextStyle,
+
+  /* Style dành riêng cho AI Budget Item */
+  aiHeaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 5,
+    paddingHorizontal: 4,
+  },
+  aiHeaderText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#12d0ff',
+    marginLeft: 8,
+    fontStyle: 'italic',
+  },
+  aiBudgetCard: {
+    opacity: 0.5, // Làm nhạt card
+    borderStyle: 'solid', // Đường viền đứt đoạn tạo cảm giác "chưa chính thức"
+    borderColor: '#12d0ff60',
+    backgroundColor: 'rgba(18, 208, 255, 0.02)', // Nền xanh cực nhạt
+  },
+  aiBadge: {
+    fontSize: 10,
+    backgroundColor: 'rgba(18, 208, 255, 0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+    fontWeight: '700',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  /* Style cho cụm nút Clear và Save/Generate */
+  aiActionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+    gap: 12,
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.error, // Màu xám nhạt
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  saveAllButton: {
+    flex: 2,
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#12D0FF', // Màu chủ đạo của bạn
+    shadowColor: '#12D0FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveAllButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 6,
+  },
 })

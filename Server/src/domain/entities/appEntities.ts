@@ -22,7 +22,7 @@ export interface ITransaction {
   amount: number;
   type: 'sending' | 'income';
   wallet: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   note: string;
   title: string;
 }
@@ -112,11 +112,17 @@ export interface BudgetEntity {
   date: string;          // "2026-03-01"
   status: string;
   categoryId: string;
-  categoryName: string;
-  iconName: string;
-  iconColor: string;
-  categoryType: string;
-  transactions: BudgetTransactionEntity[];
+  categoryName?: string;
+  iconName?: string;
+  iconColor?: string;
+  categoryType?: string;
+  transactions?: BudgetTransactionEntity[];
+}
+
+export interface DataForAI{
+  buget:BudgetEntity[], 
+  category: CategoryEntity[], 
+  transaction: ITransaction[]
 }
 
 

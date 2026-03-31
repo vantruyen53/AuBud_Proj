@@ -78,6 +78,7 @@ export class DebtRepository implements IDebtRepository {
     }
 
     async update(dto: UpdateDebtDTO): Promise<boolean> {
+        console.log('update wallet [dto]: ', dto)
         try{
             const sql = `
                 UPDATE debts

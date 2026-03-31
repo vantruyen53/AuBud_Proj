@@ -24,55 +24,65 @@ export class TransactionRepository implements ITransactionRepository {
   }
 
   async find(userId: string,query: TransactionQueryDTO): Promise<ITransaction[]> {
-    const { day, month, year, categoryId, handleBy } = query;
+    const { day, month, year, categoryId,endDate,startDate, handleBy } = query;
 
-    let sql = `
-    SELECT 
-      t.id,
-      t.amount,
-      t.note,
-      t.title,
-      t.type,
-      t.status,
-      t.user_id        AS userId,
-      t.wallet_id      AS walletId,
-      t.category_id    AS categoryId,
-      t.budget_id      AS budgetId,
-      t.created_at     AS createdAt, 
-      c.name           AS categoryName,
-      c.icon_name      AS iconName,
-      c.icon_color     AS iconColor,
-      c.type           AS categoryType,
-      c.library        AS library,
-      w.name           AS walletName
-    FROM transaction t
-    JOIN category c ON t.category_id = c.id
-    JOIN wallet w ON t.wallet_id = w.id
-    WHERE t.user_id = ? AND t.status = 'completed'
-  `;
+    let sql;
     const params: any[] = [userId];
-    // Lọc theo ngày
-    if (day && month && year) {
-      sql += ` AND DATE(t.created_at) = ?`;
-      params.push(`${year}-${month}-${day}`);
-    } 
-    // Lọc theo tháng
-    else if (month && year) {
-      sql += ` AND MONTH(t.created_at) = ? AND YEAR(t.created_at) = ?`;
-      params.push(month, year);
-    }
-    // Lọc theo năm
-    else if (year) {
-      sql += ` AND YEAR(t.created_at) = ?`;
-      params.push(year);
-    }
-    // Lọc theo category
-    if (categoryId) {
-      sql += ` AND t.category_id = ?`;
-      params.push(categoryId);
-    }
 
-    sql += ` ORDER BY t.created_at DESC`;
+    if(endDate && startDate){
+      sql = `SELECT id, amount, note, title, user_id AS userId, wallet_id AS walletId, category_id AS categoryId, created_at AS createdAt
+      FROM transaction
+      WHERE user_id = ? AND status = 'completed' AND type = 'sending' AND DATE(created_at) BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }else{
+      sql = `
+        SELECT 
+          t.id,
+          t.amount,
+          t.note,
+          t.title,
+          t.type,
+          t.status,
+          t.user_id        AS userId,
+          t.wallet_id      AS walletId,
+          t.category_id    AS categoryId,
+          t.budget_id      AS budgetId,
+          t.created_at     AS createdAt, 
+          c.name           AS categoryName,
+          c.icon_name      AS iconName,
+          c.icon_color     AS iconColor,
+          c.type           AS categoryType,
+          c.library        AS library,
+          w.name           AS walletName
+        FROM transaction t
+        JOIN category c ON t.category_id = c.id
+        JOIN wallet w ON t.wallet_id = w.id
+        WHERE t.user_id = ? AND t.status = 'completed'
+      `;
+
+      // Lọc theo ngày
+      if (day && month && year) {
+        sql += ` AND DATE(t.created_at) = ?`;
+        params.push(`${year}-${month}-${day}`);
+      } 
+      // Lọc theo tháng
+      else if (month && year) {
+        sql += ` AND MONTH(t.created_at) = ? AND YEAR(t.created_at) = ?`;
+        params.push(month, year);
+      }
+      // Lọc theo năm
+      else if (year) {
+        sql += ` AND YEAR(t.created_at) = ?`;
+        params.push(year);
+      }
+      // Lọc theo category
+      if (categoryId) {
+        sql += ` AND t.category_id = ?`;
+        params.push(categoryId);
+      }
+
+      sql += ` ORDER BY t.created_at DESC`;
+    }
 
     const [rows]: any = await this.pool.execute(sql, params);
 

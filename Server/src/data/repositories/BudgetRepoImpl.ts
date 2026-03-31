@@ -7,37 +7,51 @@ import { LogService } from "../../services/systemLogService.js";
 export class BudgetRepository implements IBudgetRepository {
   constructor(private pool: Pool) {}
 
-  async findByMonth(dto: GetBudgetsDTO): Promise<BudgetEntity[]> {
+  async findByMonth(dto: GetBudgetsDTO, getRange?: {start:string,end:string}): Promise<BudgetEntity[]> {
     const { userId, month, year } = dto;
 
-    const sql = `
-    SELECT 
-      b.id,
-      b.amount_limit   AS amountLimit,
-      b.budget_month   AS date,
-      b.status,
-      c.id             AS categoryId,
-      c.name           AS categoryName,
-      c.icon_name      AS iconName,
-      c.icon_color     AS iconColor,
-      c.type           AS categoryType,
-      t.id             AS transactionId,
-      t.amount         AS transactionAmount
-    FROM budget b
-    JOIN category c ON b.category_id = c.id
-    LEFT JOIN transaction t
-      ON  t.category_id = b.category_id
-      AND t.user_id     = b.user_id
-      AND MONTH(t.created_at) = ?
-      AND YEAR(t.created_at)  = ?
-      AND t.status = 'completed'        
-    WHERE b.user_id = ?
-      AND MONTH(b.budget_month) = ?
-      AND YEAR(b.budget_month)  = ?
-      AND b.status != 'deleted'         
-  `;
+    let sql;
+    const params: any[] = [];
 
-    const [rows]: any = await this.pool.execute(sql, [month, year, userId, month, year]);
+    if(getRange){
+      sql = `
+      SELECT id, amount_limit AS amountLimit, budget_month AS date, category_id as categoryId from budget
+      WHERE user_id = ? AND budget_month BETWEEN ? AND ? AND status != 'deleted'
+      `
+      params.push(userId, getRange?.start || `${year}-${month}-01`, getRange?.end || `${year}-${month}-31`);
+    } else{
+
+      sql = `
+      SELECT 
+        b.id,
+        b.amount_limit   AS amountLimit,
+        b.budget_month   AS date,
+        b.status,
+        c.id             AS categoryId,
+        c.name           AS categoryName,
+        c.icon_name      AS iconName,
+        c.icon_color     AS iconColor,
+        c.type           AS categoryType,
+        t.id             AS transactionId,
+        t.amount         AS transactionAmount
+      FROM budget b
+      JOIN category c ON b.category_id = c.id
+      LEFT JOIN transaction t
+        ON  t.category_id = b.category_id
+        AND t.user_id     = b.user_id     
+        AND MONTH(t.created_at) = ?
+        AND YEAR(t.created_at)  = ?
+        AND t.status = 'completed'        
+      WHERE b.user_id = ?
+        AND MONTH(b.budget_month) = ?
+        AND YEAR(b.budget_month)  = ?
+        AND b.status != 'deleted'
+    `;
+
+    params.push(month, year, userId, month, year);
+  }
+
+    const [rows]: any = await this.pool.execute(sql, params);
 
     // Gom nhóm transactions vào từng budget
     const budgetMap = new Map<string, BudgetEntity>();
@@ -60,12 +74,14 @@ export class BudgetRepository implements IBudgetRepository {
 
       // Chỉ push nếu có transaction (LEFT JOIN có thể trả về null)
       if (row.transactionId) {
-        budgetMap.get(row.id)!.transactions.push({
+        budgetMap.get(row.id)!.transactions?.push({
           id: row.transactionId,
           amount: row.transactionAmount,
         });
       }
     }
+
+    console.log("Budgets fetched from DB: ", Array.from(budgetMap.values()));
 
     return Array.from(budgetMap.values());
   }
@@ -89,14 +105,55 @@ export class BudgetRepository implements IBudgetRepository {
 
       return result.affectedRows > 0;
     } catch (error:any) {
-       await LogService.write({
-        message: `BudgetRepository.create failed: ${error.message}`,
+        await LogService.write({
+          message: `BudgetRepository.create failed: ${error.message}`,
+          actor_type: 'system', type: 'error', status: 'failure',
+          actionDetail: 'budget_repo.create.error',
+          actorId: dto.userId,
+          metaData: { error: error.message, stack: error.stack } as any,
+        });
+        console.error("Create budget at repo faile: ", error)
+        return false
+    }
+  }
+
+  async createMultiple(userId:string,budgets: any[]): Promise<boolean> {
+    const connection = await this.pool.getConnection();
+    try {
+      if(budgets.length === 0) return false;
+
+      for (const budget of budgets) {
+        // Chuyển logic INSERT trực tiếp vào đây hoặc truyền connection vào hàm create
+        const [month, year] = budget.date.split('/');
+        const yearMonth = `${year}-${month}-01`;
+        const id = crypto.randomUUID();
+
+        const sql = `
+          INSERT INTO budget (id, user_id, category_id, amount_limit, budget_month, status, last_access)
+          VALUES (?, ?, ?, ?, ?, ?, NOW())
+        `;
+
+        const [res]: any = await connection.execute(sql, [
+          id, userId, budget.categoryId, budget.target, yearMonth, budget.status
+        ]);
+
+        if (res.affectedRows === 0) {
+          throw new Error("Một bản ghi không thể tạo");
+        }
+      }
+
+      await connection.commit(); // Thành công tất cả thì mới lưu vào DB
+      return true;
+
+    } catch (error:any) {
+      await LogService.write({
+        message: `BudgetRepository.create-multiple failed: ${error.message}`,
         actor_type: 'system', type: 'error', status: 'failure',
-        actionDetail: 'budget_repo.create.error',
-        actorId: dto.userId,
+        actionDetail: 'budget_repo.create-multiple.error',
+        actorId: userId,
         metaData: { error: error.message, stack: error.stack } as any,
       });
-      console.error("Create budget at repo faile: ", error)
+      console.error("Create multiple budget at repo failed: ", error)
       return false
     }
   }

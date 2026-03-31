@@ -81,7 +81,7 @@ export const extractWallet = (type: 'wallet' | 'saving' | 'debt'| "group" | null
           type: data.type,        
           partnerName: data.partnerName,
           totalAmount: isNaN(Number(data.totalAmount)) ? 0 : Number(data.totalAmount ?? 0),
-          remaining:   isNaN(Number(data.totalAmount)) ? 0 : Number(data.totalAmount ?? 0),
+          remaining:   Number(data.remaining) ? Number(data.remaining) : Number(data.totalAmount ?? 0),
           status:'active',
           createdAt:dateTimeStr(),
           actionType:'debt',

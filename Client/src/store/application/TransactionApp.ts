@@ -24,20 +24,20 @@ export class TransactionApp{
     private async _decryptData(raw: any, secretKey: string): Promise<ITransactionItem> {
         const d = await decryptFormData<any>(raw, secretKey,);
         const { createdAt, categoryId, categoryName, categoryType, iconName, iconColor, walletName, ...rest } = d;
-        return {
-        ...rest,
-        amount: this._toNumber(d.amount),
-        date: createdAt,    
-        wallet: walletName,    
-        type: d.type,
-        category: {
-            id: categoryId,
-            name: categoryName,
-            type: categoryType,
-            iconName: iconName,
-            iconColor: iconColor,
-        },
-    };
+            return {
+            ...rest,
+            amount: this._toNumber(d.amount),
+            date: createdAt,    
+            wallet: walletName,    
+            type: d.type,
+            category: {
+                id: categoryId,
+                name: categoryName,
+                type: categoryType,
+                iconName: iconName,
+                iconColor: iconColor,
+            },
+        };
     }
 
     private async _decryptMonthlySummary(raw:IMonthlySummary, secrekey:string):Promise<IMonthlySummary>{

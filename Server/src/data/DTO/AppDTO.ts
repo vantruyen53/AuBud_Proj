@@ -1,4 +1,5 @@
-// domain/dtos/TransactionDTO.ts
+// import type{ICategory} from ;
+
 export interface CreateTransactionDTO {
   categoryId: string;
   amount: string;
@@ -24,8 +25,21 @@ export interface TransactionQueryDTO {
   day?: string;
   month?: string;
   year?: string;
+  endDate?: string;
+  startDate?: string;
   categoryId?: string;
-  handleBy:'bot'|'user'
+  handleBy?:'bot'|'user'
+}
+
+export interface TransactionForGemini {
+    id: string;
+    amount:string,
+    note:string,
+    title:string,
+    userId:string,
+    walletId:string,
+    categoryId:string,
+    createdAt:string,
 }
 
 //==========================WALLET=================
@@ -144,7 +158,6 @@ export interface GetBudgetsDTO {
   month: string;
   year: string;
 }
-
 //=========================WEB DATA SCRAPE============
 // Data sau khi scrape về — trước khi lưu DB
 export interface IForeignCurrencyRaw {

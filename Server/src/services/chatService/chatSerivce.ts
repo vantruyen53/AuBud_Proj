@@ -1,8 +1,8 @@
 // chat.service.ts
 import { callGemini } from './LLMService.js';
 import type { GeminiResponse } from './LLMService.js';
-import { buildSystemPrompt } from '../../chat/system.prompt.js';
-import tools from '../../chat/system.tools.js';
+import { buildSystemPrompt } from '../../AI/system.prompt.js';
+import tools from '../../AI/system.tools.js';
 import { usageStatsRepository } from '../../data/repositories/usageStatsRepoImpl.js';
 import pool from '../../config/dbConfig.js';
 import { CategoryRepository } from '../../data/repositories/CategoryRepository.js';
@@ -37,8 +37,8 @@ export const chatService = async ({ userId, message, context, wallets, isFollowU
 
     const fullMessage = context ? `${message}\n\nData context:\n${context}` : message;
 
-    const response = await callGemini({ systemPrompt, tools, message: fullMessage });
-    return response;
+    const response = await callGemini('chat', { systemPrompt, tools, message: fullMessage });
+    return response as GeminiResponse;
   } catch (error: any) {
     // callGemini đã log lỗi Gemini rồi
     // Chỉ log nếu lỗi xảy ra ngoài callGemini (VD: categoryRepo, buildSystemPrompt,...)

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { LogService } from '../systemLogService.js';
+import type { GeminiBudgetResponse } from '../applicationService/BudgetService.js';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -18,7 +19,7 @@ export interface GeminiResponse {
   } | null;
 }
 
-export const callGemini = async ({ systemPrompt, message }: CallGeminiParams): Promise<GeminiResponse> => {
+export const callGemini = async (type:'chat' | 'budget'='chat', { systemPrompt, message }: CallGeminiParams): Promise<GeminiResponse | GeminiBudgetResponse> => {
   const start = Date.now();
   try {
     console.log('=== callGemini start, message:', message);
@@ -56,9 +57,15 @@ export const callGemini = async ({ systemPrompt, message }: CallGeminiParams): P
     });
 
     try {
-      return JSON.parse(raw) as GeminiResponse;
+      if(type==='chat')
+        return JSON.parse(raw) as GeminiResponse;
+      else
+        return JSON.parse(raw) as GeminiBudgetResponse;
     } catch {
-      return { type: 'reply', message: raw, command: null };
+      if(type==='chat')
+        return { type: 'reply', message: raw, command: null };
+      else       
+        return { message: 'Some thing went wrong', budgets: [] };
     }
   } catch (error:any) {
     const duration = Date.now() - start;

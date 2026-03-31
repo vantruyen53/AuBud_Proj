@@ -24,6 +24,7 @@ export class WalletService implements IWalleetService {
             });
 
             if (!res.ok) {
+                console.log('Message error: ', await res.json() || res.statusText);
                 throw new Error(res.statusText || "Something went wrong");
             }
 
@@ -34,7 +35,7 @@ export class WalletService implements IWalleetService {
                 message: "Successfully"
             };
         } catch (error: any) {
-            console.log(`Error in ${method} request for ${actionType}:`, error);
+            console.log(`Error in ${method} request for ${actionType}:`, error.message || error);
             return { status: false, data: null, message: error.message || "Network Error" };
         }
     }

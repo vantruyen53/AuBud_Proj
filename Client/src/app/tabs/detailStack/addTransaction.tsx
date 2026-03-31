@@ -31,9 +31,6 @@ import { dateFormat, toDateTimeFormat } from "@/src/utils/format";
 import Calendar from "@/src/components/calendar";
 import TypeDebt from "@/src/components/typeDebts";
 import {
-  IWallet,
-  ISaving,
-  IDebt,
   IDateState,ICategory,
 } from "@/src/models/interface/Entities";
 import { extractTransaction } from "@/src/utils/helper";
@@ -45,10 +42,15 @@ import {
   CreateTransactionDTO,CategoryDTO
 } from "@/src/models/interface/DTO";
 
+import { useAudioPlayer } from 'expo-audio';
+
 //Application
 import { TransactionApp } from "@/src/store/application/TransactionApp";
 import { WalletApp } from "@/src/store/application/WalletApp";
 import { CategoryApp } from "@/src/store/application/CategoryApp";
+
+
+const transactionSuccessAudio = require('@/src/assets/audio/transactionSuccessAudio.mp3');
 
 export default function AddTransactionScreen({route}:any) {
   const navigation = useNavigation<HomeStackNavProp>();
@@ -56,6 +58,7 @@ export default function AddTransactionScreen({route}:any) {
   const month = new Date().getMonth() + 1;
   const day = new Date().getDate();
 
+  const player = useAudioPlayer(transactionSuccessAudio);
   const {hanldeType, payLoad}= route.params;
 
   const { id, accessToken, walletScreen, refreshWallet } = useProvider();
@@ -195,7 +198,9 @@ export default function AddTransactionScreen({route}:any) {
           if (actionType === "Sending" || actionType === "Income") {
             const payLoad = e as CreateTransactionDTO;
             const result = await tractionApp.addTransaction(payLoad, walletSelected.balance);
-            if (result) clearForm();
+            if (result){
+              clearForm()
+            };
           } 
           else if (actionType === "Debt" || actionType === "Saving") {
             const payLoad = e as DebtTransactionDTO | SavingTransactionDTO;
@@ -203,13 +208,21 @@ export default function AddTransactionScreen({route}:any) {
             const result = await walletApp.addWalletTransaction(
               payLoad,walletSelected.balance,remaingOrBalance
             );
-            if (result) clearForm();
+            if (result){
+              clearForm()
+            };
           } 
           else {
             const payLoad = e as ConvertDTO;
             const result = await walletApp.convertBalance(payLoad, walletSelected.balance, walletTo.balance);
-            if (result) clearForm();
+            if (result){
+              clearForm()
+            };
           }
+
+          player.seekTo(0);
+          player.play();
+
           await refreshWallet(id, accessToken)
         } catch (err) {
           Alert.alert("Error", `Something went wrong ${err}`);

@@ -73,7 +73,7 @@ export async function initMarketScheduler(marketService: IMarketService) {
   const reminderService = new ReminderService();
   scheduler.addCronJob(
     new CronJob(
-      { cronExpression: '8 21 * * *' },
+      { cronExpression: '12 15 * * *' },
       createTrackedTask('daily-reminder', () =>
         reminderService.sendDailyReminder()
       )

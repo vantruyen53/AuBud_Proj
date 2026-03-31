@@ -129,13 +129,14 @@ export class WalletApp{
 
   async updateWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO| undefined, handleBy:'bot'|'user'="user") {
     if (!wallet) return false;
+
     const secretKey = await Secure.getItemAsync(SECRET_KEY_STORE) as string;
 
     const encryptedPayload = await encryptFormData(wallet, secretKey);
     return await this.walletService.updateWallet(encryptedPayload, handleBy)
   }
 
-  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, newPaymentWalletBalance?:number, handleBy:'bot'|'user'="user") {
+  async createNewWallet(wallet: WalletDTO | CreateDebtDTO | CreateSavingDTO | undefined, handleBy:'bot'|'user'="user", newPaymentWalletBalance?:number) {
     if (!wallet) return false;
 
     console.log(wallet)

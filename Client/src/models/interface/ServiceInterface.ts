@@ -1,6 +1,7 @@
-import {  CategoryDTO,EncryptedDTO, } from "./DTO";
+import {  CategoryDTO,EncryptedDTO, BudgetDTO } from "./DTO";
 import { ITransactionItem , IWallet, IDebt, IDebtHistory, IGroupFund, 
-  IGroupFundHistory, ISaving, ISavingHistory, IMonthlySummary, BudgetEntitiy, IMarketDataResponse} from "./Entities";
+  DataForAI, ISaving, ISavingHistory, IMonthlySummary,Budgets, BudgetEntitiy, IMarketDataResponse} from "./Entities";
+import type { TransactionForGemini, GeminiProposal } from "@/src/store/application/BudgetApp";
 
 
 export interface ITransactionService {
@@ -48,6 +49,10 @@ export interface IBudgetService {
   addNewBudget(payLoad: EncryptedDTO): Promise<{success: boolean, message?: string}>;
   updateBudget(budgetId: string, newTarget: string): Promise<{success: boolean, message?: string}>;
   deleteBudget(budgetId: string): Promise<{success: boolean, message?: string}>;
+  getDataForAutoBudget(month:string, year:string):Promise<DataForAI>
+  generateAutoBudget(budgets: (Budgets | null)[], transactions: (TransactionForGemini|null)[], 
+    categories: CategoryDTO[], wallets: IWallet[]):Promise<GeminiProposal>
+    addMultipleBudgets(payLoads: EncryptedDTO[]): Promise<{success: boolean, message?: string}>;
 }
 
 export interface IMarketService {
